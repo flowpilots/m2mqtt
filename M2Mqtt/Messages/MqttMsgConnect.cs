@@ -19,7 +19,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         internal const byte KEEP_ALIVE_TIME_SIZE = 2;
 
         internal const byte PROTOCOL_VERSION = 0x03;
-        internal const ushort KEEP_ALIVE_PERIOD_DEFAULT = 10; // seconds
+        internal const ushort KEEP_ALIVE_PERIOD_DEFAULT = 60; // seconds
         internal const ushort MAX_KEEP_ALIVE = 65535; // 16 bit
 
         // connect flags

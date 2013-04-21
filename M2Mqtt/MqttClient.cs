@@ -78,6 +78,11 @@ namespace uPLibrary.Networking.M2Mqtt
         public event MqttMsgUnsubscribedEventHandler MqttMsgUnsubscribed;
 
         /// <summary>
+        /// Connection state between client and broker
+        /// </summary>
+        public bool IsConnected { get; private set; }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="brokerIpAddress">Broker IP address</param>
@@ -150,6 +155,8 @@ namespace uPLibrary.Networking.M2Mqtt
             // if connection accepted, start keep alive timer
             if (connack.ReturnCode == MqttMsgConnack.CONN_ACCEPTED)
             {
+                this.IsConnected = true;
+
                 this.keepAlivePeriod = keepAlivePeriod * 1000; // convert in ms
                 
                 // start thread for sending keep alive message to the broker
@@ -185,6 +192,8 @@ namespace uPLibrary.Networking.M2Mqtt
             this.keepAliveThread.Join();
 
             this.socket.Close();
+
+            this.IsConnected = false;
         }
 
         /// <summary>
@@ -503,8 +512,12 @@ namespace uPLibrary.Networking.M2Mqtt
                 // update last message sent ticks
                 this.lastSend = DateTime.Now.Ticks;
             }
-            catch
+            catch (SocketException e)
             {
+                // connection reset by broker
+                if (e.SocketErrorCode == SocketError.ConnectionReset)
+                    this.IsConnected = false;
+
                 throw new MqttCommunicationException();
             }
 
