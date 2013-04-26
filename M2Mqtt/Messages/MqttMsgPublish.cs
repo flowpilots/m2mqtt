@@ -107,8 +107,10 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
                 varHeaderSize += MESSAGE_ID_SIZE;
             }
             
-            // message data
-            payloadSize += this.message.Length;
+            // check on message with zero length
+            if (this.message != null)
+                // message data
+                payloadSize += this.message.Length;
 
             remainingLength += (varHeaderSize + payloadSize);
 
@@ -152,9 +154,13 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
                 buffer[index++] = (byte)(this.messageId & 0x00FF); // LSB
             }
 
-            // message data
-            Array.Copy(this.message, 0, buffer, index, this.message.Length);
-            index += this.message.Length;
+            // check on message with zero length
+            if (this.message != null)
+            {
+                // message data
+                Array.Copy(this.message, 0, buffer, index, this.message.Length);
+                index += this.message.Length;
+            }
 
             return buffer;
         }
