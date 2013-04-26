@@ -90,18 +90,10 @@ namespace uPLibrary.Networking.M2Mqtt
         public MqttClient(IPAddress brokerIpAddress, int brokerPort = MQTT_BROKER_DEFAULT_PORT)
         {
             this.brokerIpAddress = brokerIpAddress;
-            this.brokerPort = brokerPort;
-
-            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            this.brokerPort = brokerPort;            
 
             this.endReceiving = new AutoResetEvent(false);
             this.keepAliveEvent = new AutoResetEvent(false);
-            this.lastSend = 0;
-
-            this.isRunning = true;
-            // start thread for receiving messages from broker
-            this.receiveThread = new Thread(this.ReceiveThread);
-            this.receiveThread.Start();
         }
 
         /// <summary>
@@ -143,6 +135,7 @@ namespace uPLibrary.Networking.M2Mqtt
 
             try
             {
+                this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 // try connection to the broker
                 this.socket.Connect(new IPEndPoint(this.brokerIpAddress, this.brokerPort));
             }
@@ -150,6 +143,12 @@ namespace uPLibrary.Networking.M2Mqtt
             {
                 throw new MqttConnectionException();
             }
+
+            this.lastSend = 0;
+            this.isRunning = true;
+            // start thread for receiving messages from broker
+            this.receiveThread = new Thread(this.ReceiveThread);
+            this.receiveThread.Start();
             
             MqttMsgConnack connack = (MqttMsgConnack)this.SendReceive(connect.GetBytes());
             // if connection accepted, start keep alive timer
