@@ -513,9 +513,11 @@ namespace uPLibrary.Networking.M2Mqtt
             }
             catch (SocketException e)
             {
+#if !MF_FRAMEWORK_VERSION_V4_2
                 // connection reset by broker
                 if (e.SocketErrorCode == SocketError.ConnectionReset)
                     this.IsConnected = false;
+#endif
 
                 throw new MqttCommunicationException();
             }
