@@ -608,11 +608,11 @@ namespace uPLibrary.Networking.M2Mqtt
                                 MqttMsgPublish msgReceived = MqttMsgPublish.Parse(fixedHeaderFirstByte[0], this.socket);
                                 
                                 // for QoS Level 1 and 2, client sends PUBACK message to broker
-                                if ((this.msgReceived.QosLevel == MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE) ||
-                                    (this.msgReceived.QosLevel == MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE))
+                                if ((msgReceived.QosLevel == MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE) ||
+                                    (msgReceived.QosLevel == MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE))
                                 {
                                     MqttMsgPuback puback = new MqttMsgPuback();
-                                    puback.MessageId = (msgReceived).MessageId;
+                                    puback.MessageId = msgReceived.MessageId;
                                     this.Send(puback.GetBytes());
                                 }
 
