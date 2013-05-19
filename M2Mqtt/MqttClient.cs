@@ -653,7 +653,7 @@ namespace uPLibrary.Networking.M2Mqtt
 
                                 // raise published message event
                                 // (PUBCOMP received for QoS Level 2)
-                                this.OnMqttMsgPublished(((MqttMsgPuback)this.msgReceived).MessageId);
+                                this.OnMqttMsgPublished(((MqttMsgPubcomp)this.msgReceived).MessageId);
 
                                 break;
 
