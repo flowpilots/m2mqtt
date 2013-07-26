@@ -178,7 +178,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             buffer = new byte[remainingLength];
 
             // read bytes from socket...
-            socket.Receive(buffer);
+            int received = socket.Receive(buffer);
 
             // topic name
             topicUtf8Length = ((buffer[index++] << 8) & 0xFF00);
@@ -205,8 +205,27 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             }
 
             // get payload with message data
-            msg.message = new byte[remainingLength - index];
-            Array.Copy(buffer, index, msg.message, 0, msg.message.Length);
+            int messageSize = remainingLength - index;
+            int remaining = messageSize;
+            int messageOffset = 0;
+            msg.message = new byte[messageSize];
+
+            // BUG FIX 26/07/2013 : receiving large payload
+
+            // copy first part of payload data received
+            Array.Copy(buffer, index, msg.message, messageOffset, received - index);
+            remaining -= (received - index);
+            messageOffset += (received - index);
+
+            // if payload isn't finished
+            while (remaining > 0)
+            {
+                // receive other payload data
+                received = socket.Receive(buffer);
+                Array.Copy(buffer, 0, msg.message, messageOffset, received);
+                remaining -= received;
+                messageOffset += received;
+            }
 
             return msg;
         }
