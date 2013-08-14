@@ -89,8 +89,36 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="brokerPort">Broker port</param>
         public MqttClient(IPAddress brokerIpAddress, int brokerPort = MQTT_BROKER_DEFAULT_PORT)
         {
+            this.Init(brokerIpAddress, brokerPort);
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="brokerHostName">Broker Host Name</param>
+        /// <param name="brokerPort">Broker port</param>
+        public MqttClient(string brokerHostName, int brokerPort = MQTT_BROKER_DEFAULT_PORT)
+        {
+            // throw exceptions to the caller
+            IPHostEntry hostEntry = Dns.GetHostEntry(brokerHostName);
+
+            if ((hostEntry != null) && (hostEntry.AddressList.Length > 0))
+            {
+                this.Init(hostEntry.AddressList[0], brokerPort);
+            }
+            else
+                throw new ApplicationException("No address found for the broker");
+        }
+
+        /// <summary>
+        /// MqttClient initialization
+        /// </summary>
+        /// <param name="brokerIpAddress">Broker IP address</param>
+        /// <param name="brokerPort">Broker port</param>
+        private void Init(IPAddress brokerIpAddress, int brokerPort)
+        {
             this.brokerIpAddress = brokerIpAddress;
-            this.brokerPort = brokerPort;            
+            this.brokerPort = brokerPort;
 
             this.endReceiving = new AutoResetEvent(false);
             this.keepAliveEvent = new AutoResetEvent(false);
@@ -513,7 +541,7 @@ namespace uPLibrary.Networking.M2Mqtt
             }
             catch (SocketException e)
             {
-#if !MF_FRAMEWORK_VERSION_V4_2
+#if (!MF_FRAMEWORK_VERSION_V4_2 && !MF_FRAMEWORK_VERSION_V4_3)
                 // connection reset by broker
                 if (e.SocketErrorCode == SocketError.ConnectionReset)
                     this.IsConnected = false;
