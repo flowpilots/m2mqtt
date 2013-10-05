@@ -16,7 +16,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\NetMf42\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE,MF_FRAMEWORK_VERSION_V4_2,SSL</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -24,7 +24,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\NetMf42\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE,MF_FRAMEWORK_VERSION_V4_2,SSL</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -54,11 +54,14 @@
     <Compile Include="Messages\MqttMsgUnsubscribe.cs" />
     <Compile Include="Messages\MqttMsgUnsubscribedEventArgs.cs" />
     <Compile Include="MqttClient.cs" />
+    <Compile Include="MqttNetworkChannel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.SPOT.Native">
     </Reference>
+    <Reference Include="Microsoft.SPOT.Net.Security" />
     <Reference Include="System" />
+    <Reference Include="System.Net.Security" />
   </ItemGroup>
 </Project>

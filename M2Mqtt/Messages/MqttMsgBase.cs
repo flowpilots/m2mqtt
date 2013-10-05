@@ -1,3 +1,10 @@
+#if SSL
+#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
+using Microsoft.SPOT.Net.Security;
+#else
+using System.Net.Security;
+#endif
+#endif
 using System;
 using System.Net.Sockets;
 
@@ -133,9 +140,9 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// <summary>
         /// Decode remaining length reading bytes from socket
         /// </summary>
-        /// <param name="socket">Socket from reading bytes</param>
+        /// <param name="channel">Channel from reading bytes</param>
         /// <returns>Decoded remaining length</returns>
-        protected static int decodeRemainingLength(Socket socket)
+        protected static int decodeRemainingLength(MqttNetworkChannel channel)
         {
             int multiplier = 1;
             int value = 0;
@@ -144,7 +151,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             do
             {
                 // next digit from stream
-                socket.Receive(nextByte);
+                channel.Receive(nextByte);
                 digit = nextByte[0];
                 value += ((digit & 127) * multiplier);
                 multiplier *= 128;

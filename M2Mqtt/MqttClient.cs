@@ -4,6 +4,15 @@ using System.Net.Sockets;
 using System.Threading;
 using uPLibrary.Networking.M2Mqtt.Exceptions;
 using uPLibrary.Networking.M2Mqtt.Messages;
+#if SSL
+#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
+using Microsoft.SPOT.Net.Security;
+#else
+using System.Security.Authentication;
+using System.Net.Security;
+#endif
+#endif
+using System.Security.Cryptography.X509Certificates;
 
 namespace uPLibrary.Networking.M2Mqtt
 {
@@ -34,6 +43,7 @@ namespace uPLibrary.Networking.M2Mqtt
 
         // default port for MQTT protocol
         public const int MQTT_BROKER_DEFAULT_PORT = 1883;
+        public const int MQTT_BROKER_DEFAULT_SSL_PORT = 8883;
         // default timeout on receiving from broker
         public const int MQTT_DEFAULT_TIMEOUT = 5000;
         // max publish, subscribe and unsubscribe retry for QoS Level 1 or 2
@@ -41,12 +51,15 @@ namespace uPLibrary.Networking.M2Mqtt
         // delay for retry publish, subscribe and unsubscribe for QoS Level 1 or 2
         private const int MQTT_DELAY_RETRY = 10000;
 
-        // socket for communication with broker
-        private Socket socket;
+        // CA certificate
+        private X509Certificate caCert;
 
-        // broker ip address and port
+        // broker hostname, ip address and port
+        private string brokerHostName;
         private IPAddress brokerIpAddress;
         private int brokerPort;
+        // using SSL
+        private bool secure;
 
         // thread for receiving incoming message from broker
         Thread receiveThread;
@@ -82,14 +95,19 @@ namespace uPLibrary.Networking.M2Mqtt
         /// </summary>
         public bool IsConnected { get; private set; }
 
+        // channel to communicate over the network
+        private MqttNetworkChannel channel;
+
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="brokerIpAddress">Broker IP address</param>
         /// <param name="brokerPort">Broker port</param>
-        public MqttClient(IPAddress brokerIpAddress, int brokerPort = MQTT_BROKER_DEFAULT_PORT)
+        /// <param name="secure">Using secure connection</param>
+        /// <param name="caCert">CA certificate for secure connection</param>
+        public MqttClient(IPAddress brokerIpAddress, int brokerPort = MQTT_BROKER_DEFAULT_PORT, bool secure = false, X509Certificate caCert = null)
         {
-            this.Init(brokerIpAddress, brokerPort);
+            this.Init(null, brokerIpAddress, brokerPort, secure, caCert);
         }
 
         /// <summary>
@@ -97,14 +115,16 @@ namespace uPLibrary.Networking.M2Mqtt
         /// </summary>
         /// <param name="brokerHostName">Broker Host Name</param>
         /// <param name="brokerPort">Broker port</param>
-        public MqttClient(string brokerHostName, int brokerPort = MQTT_BROKER_DEFAULT_PORT)
+        /// <param name="secure">Using secure connection</param>
+        /// <param name="caCert">CA certificate for secure connection</param>
+        public MqttClient(string brokerHostName, int brokerPort = MQTT_BROKER_DEFAULT_PORT, bool secure = false, X509Certificate caCert = null)
         {
             // throw exceptions to the caller
             IPHostEntry hostEntry = Dns.GetHostEntry(brokerHostName);
 
             if ((hostEntry != null) && (hostEntry.AddressList.Length > 0))
             {
-                this.Init(hostEntry.AddressList[0], brokerPort);
+                this.Init(brokerHostName, hostEntry.AddressList[0], brokerPort, secure, caCert);
             }
             else
                 throw new ApplicationException("No address found for the broker");
@@ -113,12 +133,38 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <summary>
         /// MqttClient initialization
         /// </summary>
+        /// <param name="brokerHostName">Broker host name</param>
         /// <param name="brokerIpAddress">Broker IP address</param>
         /// <param name="brokerPort">Broker port</param>
-        private void Init(IPAddress brokerIpAddress, int brokerPort)
+        /// <param name="secure">>Using secure connection</param>
+        /// <param name="caCert">CA certificate for secure connection</param>
+        private void Init(string brokerHostName, IPAddress brokerIpAddress, int brokerPort, bool secure, X509Certificate caCert)
         {
+#if SSL
+            // check security parameters
+            if ((secure) && (caCert == null))
+                throw new ArgumentException("Secure requested but CA certificate is null !");
+#else
+            if (secure)
+                throw new ArgumentException("Library compiled without SSL support");
+#endif
+
+            this.brokerHostName = brokerHostName;
+            // if broker hostname is null, set ip address
+            if (this.brokerHostName == null)
+                this.brokerHostName = brokerIpAddress.ToString();
+
             this.brokerIpAddress = brokerIpAddress;
             this.brokerPort = brokerPort;
+            this.secure = secure;
+            
+#if SSL
+            // if secure, load CA certificate
+            if (this.secure)
+            {
+                this.caCert = caCert;
+            }
+#endif
 
             this.endReceiving = new AutoResetEvent(false);
             this.keepAliveEvent = new AutoResetEvent(false);
@@ -163,13 +209,13 @@ namespace uPLibrary.Networking.M2Mqtt
 
             try
             {
-                this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                // try connection to the broker
-                this.socket.Connect(new IPEndPoint(this.brokerIpAddress, this.brokerPort));
+                // create network channel and connect to broker
+                this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerIpAddress, this.brokerPort, this.secure, this.caCert);
+                this.channel.Connect();                
             }
-            catch
+            catch (Exception ex)
             {
-                throw new MqttConnectionException();
+                throw new MqttConnectionException("Exception connecting to the broker", ex);
             }
 
             this.lastSend = 0;
@@ -218,8 +264,8 @@ namespace uPLibrary.Networking.M2Mqtt
             this.keepAliveEvent.Set();
             this.keepAliveThread.Join();
 
-            this.socket.Close();
-
+            // close network channel
+            this.channel.Close();
             this.IsConnected = false;
         }
 
@@ -512,7 +558,8 @@ namespace uPLibrary.Networking.M2Mqtt
             try
             {
                 // send message
-                this.socket.Send(msgBytes);
+                this.channel.Send(msgBytes);
+
                 // update last message sent ticks
                 this.lastSend = DateTime.Now.Ticks;
             }
@@ -535,7 +582,8 @@ namespace uPLibrary.Networking.M2Mqtt
             try
             {
                 // send message
-                this.socket.Send(msgBytes);
+                this.channel.Send(msgBytes);
+
                 // update last message sent ticks
                 this.lastSend = DateTime.Now.Ticks;
             }
@@ -572,7 +620,7 @@ namespace uPLibrary.Networking.M2Mqtt
         /// </summary>
         private void ReceiveThread()
         {
-            int readBytes;
+            int readBytes = 0;
             byte[] fixedHeaderFirstByte = new byte[1];
             byte msgType;
             
@@ -580,8 +628,15 @@ namespace uPLibrary.Networking.M2Mqtt
             {
                 try
                 {
-                    // read first byte (fixed header)
-                    readBytes = this.socket.Receive(fixedHeaderFirstByte);
+                    if (this.channel.DataAvailable)
+                        // read first byte (fixed header)
+                        readBytes = this.channel.Receive(fixedHeaderFirstByte);
+                    else
+                    {
+                        // no bytes available, sleep before retry
+                        readBytes = 0;
+                        Thread.Sleep(10);
+                    }
 
                     if (readBytes > 0)
                     {
@@ -598,7 +653,7 @@ namespace uPLibrary.Networking.M2Mqtt
                             // CONNACK message received from broker
                             case MqttMsgBase.MQTT_MSG_CONNACK_TYPE:
 
-                                this.msgReceived = MqttMsgConnack.Parse(fixedHeaderFirstByte[0], this.socket);
+                                this.msgReceived = MqttMsgConnack.Parse(fixedHeaderFirstByte[0], this.channel);
                                 this.endReceiving.Set();
                                 break;
 
@@ -610,7 +665,7 @@ namespace uPLibrary.Networking.M2Mqtt
                             // CONNACK message received from broker
                             case MqttMsgBase.MQTT_MSG_PINGRESP_TYPE:
 
-                                this.msgReceived = MqttMsgPingResp.Parse(fixedHeaderFirstByte[0], this.socket);
+                                this.msgReceived = MqttMsgPingResp.Parse(fixedHeaderFirstByte[0], this.channel);
                                 this.endReceiving.Set();
                                 break;
 
@@ -622,7 +677,7 @@ namespace uPLibrary.Networking.M2Mqtt
                             // SUBACK message received from broker
                             case MqttMsgBase.MQTT_MSG_SUBACK_TYPE:
 
-                                this.msgReceived = MqttMsgSuback.Parse(fixedHeaderFirstByte[0], this.socket);
+                                this.msgReceived = MqttMsgSuback.Parse(fixedHeaderFirstByte[0], this.channel);
                                 this.endReceiving.Set();
 
                                 // raise subscribed topic event (SUBACK message received)
@@ -633,7 +688,7 @@ namespace uPLibrary.Networking.M2Mqtt
                             // PUBLISH message received from broker
                             case MqttMsgBase.MQTT_MSG_PUBLISH_TYPE:
 
-                                MqttMsgPublish msgReceived = MqttMsgPublish.Parse(fixedHeaderFirstByte[0], this.socket);
+                                MqttMsgPublish msgReceived = MqttMsgPublish.Parse(fixedHeaderFirstByte[0], this.channel);
                                 
                                 // for QoS Level 1 and 2, client sends PUBACK message to broker
                                 if ((msgReceived.QosLevel == MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE) ||
@@ -652,7 +707,7 @@ namespace uPLibrary.Networking.M2Mqtt
                             // PUBACK message received from broker
                             case MqttMsgBase.MQTT_MSG_PUBACK_TYPE:
 
-                                this.msgReceived = MqttMsgPuback.Parse(fixedHeaderFirstByte[0], this.socket);
+                                this.msgReceived = MqttMsgPuback.Parse(fixedHeaderFirstByte[0], this.channel);
                                 this.endReceiving.Set();
 
                                 // raise published message event
@@ -664,7 +719,7 @@ namespace uPLibrary.Networking.M2Mqtt
                             // PUBREC message received from broker
                             case MqttMsgBase.MQTT_MSG_PUBREC_TYPE:
 
-                                this.msgReceived = MqttMsgPubrec.Parse(fixedHeaderFirstByte[0], this.socket);
+                                this.msgReceived = MqttMsgPubrec.Parse(fixedHeaderFirstByte[0], this.channel);
                                 this.endReceiving.Set();
                                 break;
 
@@ -676,7 +731,7 @@ namespace uPLibrary.Networking.M2Mqtt
                             // PUBCOMP message received from broker
                             case MqttMsgBase.MQTT_MSG_PUBCOMP_TYPE:
 
-                                this.msgReceived = MqttMsgPubcomp.Parse(fixedHeaderFirstByte[0], this.socket);
+                                this.msgReceived = MqttMsgPubcomp.Parse(fixedHeaderFirstByte[0], this.channel);
                                 this.endReceiving.Set();
 
                                 // raise published message event
@@ -693,7 +748,7 @@ namespace uPLibrary.Networking.M2Mqtt
                             // UNSUBACK message received from broker
                             case MqttMsgBase.MQTT_MSG_UNSUBACK_TYPE:
 
-                                this.msgReceived = MqttMsgUnsuback.Parse(fixedHeaderFirstByte[0], this.socket);
+                                this.msgReceived = MqttMsgUnsuback.Parse(fixedHeaderFirstByte[0], this.channel);
                                 this.endReceiving.Set();
 
                                 // raise unsubscribed topic event
@@ -708,6 +763,7 @@ namespace uPLibrary.Networking.M2Mqtt
 
                         this.exReceiving = null;
                     }
+
                 }
                 catch (Exception)
                 {

@@ -48,20 +48,20 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// Parse bytes for a SUBACK message
         /// </summary>
         /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="socket">Socket connected to the broker</param>
+        /// <param name="channel">Channel connected to the broker</param>
         /// <returns>SUBACK message instance</returns>
-        public static MqttMsgSuback Parse(byte fixedHeaderFirstByte, Socket socket)
+        public static MqttMsgSuback Parse(byte fixedHeaderFirstByte, MqttNetworkChannel channel)
         {
             byte[] buffer;
             int index = 0;
             MqttMsgSuback msg = new MqttMsgSuback();
 
             // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(socket);
+            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
             buffer = new byte[remainingLength];
 
             // read bytes from socket...
-            socket.Receive(buffer);
+            channel.Receive(buffer);
 
             // message id
             msg.messageId = (ushort)((buffer[index++] << 8) & 0xFF00);

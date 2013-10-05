@@ -165,7 +165,13 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             return buffer;
         }
 
-        public static MqttMsgPublish Parse(byte fixedHeaderFirstByte, Socket socket)
+        /// <summary>
+        /// Parse bytes for a PUBLISH message
+        /// </summary>
+        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
+        /// <param name="channel">Channel connected to the broker</param>
+        /// <returns>PUBLISH message instance</returns>
+        public static MqttMsgPublish Parse(byte fixedHeaderFirstByte, MqttNetworkChannel channel)
         {
             byte[] buffer;
             int index = 0;
@@ -174,11 +180,11 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             MqttMsgPublish msg = new MqttMsgPublish();
 
             // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(socket);
+            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
             buffer = new byte[remainingLength];
 
             // read bytes from socket...
-            int received = socket.Receive(buffer);
+            int received = channel.Receive(buffer);
 
             // topic name
             topicUtf8Length = ((buffer[index++] << 8) & 0xFF00);
@@ -221,7 +227,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             while (remaining > 0)
             {
                 // receive other payload data
-                received = socket.Receive(buffer);
+                received = channel.Receive(buffer);
                 Array.Copy(buffer, 0, msg.message, messageOffset, received);
                 remaining -= received;
                 messageOffset += received;

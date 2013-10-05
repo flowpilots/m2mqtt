@@ -51,19 +51,19 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// Parse bytes for a CONNACK message
         /// </summary>
         /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="socket">Socket connected to the broker</param>
+        /// <param name="channel">Channel connected to the broker</param>
         /// <returns>CONNACK message instance</returns>
-        public static MqttMsgConnack Parse(byte fixedHeaderFirstByte, Socket socket)
+        public static MqttMsgConnack Parse(byte fixedHeaderFirstByte, MqttNetworkChannel channel)
         {
             byte[] buffer;
             MqttMsgConnack msg = new MqttMsgConnack();
 
             // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(socket);
+            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
             buffer = new byte[remainingLength];
 
             // read bytes from socket...
-            socket.Receive(buffer);
+            channel.Receive(buffer);
             // ...and set return code from broker
             msg.returnCode = buffer[CONN_RETURN_CODE_BYTE_OFFSET];
 

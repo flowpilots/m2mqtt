@@ -77,20 +77,20 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// Parse bytes for a PUBCOMP message
         /// </summary>
         /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="socket">Socket connected to the broker</param>
+        /// <param name="channel">Channel connected to the broker</param>
         /// <returns>PUBCOMP message instance</returns>
-        public static MqttMsgPubcomp Parse(byte fixedHeaderFirstByte, Socket socket)
+        public static MqttMsgPubcomp Parse(byte fixedHeaderFirstByte, MqttNetworkChannel channel)
         {
             byte[] buffer;
             int index = 0;
             MqttMsgPubcomp msg = new MqttMsgPubcomp();
 
             // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(socket);
+            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
             buffer = new byte[remainingLength];
 
             // read bytes from socket...
-            socket.Receive(buffer);
+            channel.Receive(buffer);
 
             // message id
             msg.messageId = (ushort)((buffer[index++] << 8) & 0xFF00);

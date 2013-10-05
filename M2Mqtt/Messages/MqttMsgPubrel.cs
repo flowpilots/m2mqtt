@@ -82,20 +82,20 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// Parse bytes for a PUBREL message
         /// </summary>
         /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="socket">Socket connected to the broker</param>
+        /// <param name="channel">Channel connected to the broker</param>
         /// <returns>PUBREL message instance</returns>
-        public static MqttMsgPubrel Parse(byte fixedHeaderFirstByte, Socket socket)
+        public static MqttMsgPubrel Parse(byte fixedHeaderFirstByte, MqttNetworkChannel channel)
         {
             byte[] buffer;
             int index = 0;
             MqttMsgPubrel msg = new MqttMsgPubrel();
 
             // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(socket);
+            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
             buffer = new byte[remainingLength];
 
             // read bytes from socket...
-            socket.Receive(buffer);
+            channel.Receive(buffer);
 
             // read QoS level from fixed header (would be QoS Level 1)
             msg.qosLevel = (byte)((fixedHeaderFirstByte & QOS_LEVEL_MASK) >> QOS_LEVEL_OFFSET);

@@ -37,20 +37,20 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// Parse bytes for a UNSUBACK message
         /// </summary>
         /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
-        /// <param name="socket">Socket connected to the broker</param>
+        /// <param name="channel">Channel connected to the broker</param>
         /// <returns>UNSUBACK message instance</returns>
-        public static MqttMsgUnsuback Parse(byte fixedHeaderFirstByte, Socket socket)
+        public static MqttMsgUnsuback Parse(byte fixedHeaderFirstByte, MqttNetworkChannel channel)
         {
             byte[] buffer;
             int index = 0;
             MqttMsgUnsuback msg = new MqttMsgUnsuback();
 
             // get remaining length and allocate buffer
-            int remainingLength = MqttMsgBase.decodeRemainingLength(socket);
+            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
             buffer = new byte[remainingLength];
 
             // read bytes from socket...
-            socket.Receive(buffer);
+            channel.Receive(buffer);
 
             // message id
             msg.messageId = (ushort)((buffer[index++] << 8) & 0xFF00);
