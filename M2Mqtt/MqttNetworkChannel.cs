@@ -94,7 +94,7 @@ namespace uPLibrary.Networking.M2Mqtt
         /// </summary>
         public void Connect()
         {
-            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            this.socket = new Socket(this.remoteIpAddress.GetAddressFamily(), SocketType.Stream, ProtocolType.Tcp);
             // try connection to the broker
             this.socket.Connect(new IPEndPoint(this.remoteIpAddress, this.remotePort));
 
@@ -201,6 +201,27 @@ namespace uPLibrary.Networking.M2Mqtt
             this.socket.Close();
 #else
             this.socket.Close();
+#endif
+        }
+    }
+
+    /// <summary>
+    /// IPAddress Utility class
+    /// </summary>
+    public static class IPAddressUtility
+    {
+        /// <summary>
+        /// Return AddressFamily for the IP address
+        /// </summary>
+        /// <param name="ipAddress">IP address to check</param>
+        /// <returns>Address family</returns>
+        public static AddressFamily GetAddressFamily(this IPAddress ipAddress)
+        {
+#if (!MF_FRAMEWORK_VERSION_V4_2 && !MF_FRAMEWORK_VERSION_V4_3)
+            return ipAddress.AddressFamily;
+#else
+            return (ipAddress.ToString().IndexOf(':') != -1) ? 
+                AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
 #endif
         }
     }

@@ -124,7 +124,11 @@ namespace uPLibrary.Networking.M2Mqtt
 
             if ((hostEntry != null) && (hostEntry.AddressList.Length > 0))
             {
-                this.Init(brokerHostName, hostEntry.AddressList[0], brokerPort, secure, caCert);
+                // check for the first address not null
+                // it seems that with .Net Micro Framework, the IPV6 addresses aren't supported and return "null"
+                int i = 0;
+                while (hostEntry.AddressList[i] == null) i++;
+                this.Init(brokerHostName, hostEntry.AddressList[i], brokerPort, secure, caCert);
             }
             else
                 throw new ApplicationException("No address found for the broker");
