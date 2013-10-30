@@ -62,7 +62,10 @@ namespace uPLibrary.Networking.M2Mqtt
             {
 #if SSL
 #if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
-                return this.sslStream.DataAvailable;
+                if (secure)
+                    return this.sslStream.DataAvailable;
+                else
+                    return (this.socket.Available > 0);
 #else
                 if (secure)
                     return this.netStream.DataAvailable;
