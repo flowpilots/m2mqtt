@@ -295,7 +295,7 @@ namespace uPLibrary.Networking.M2Mqtt
                 // broker must send PINGRESP within timeout equal to keep alive period
                 return (MqttMsgPingResp)this.SendReceive(pingreq.GetBytes(), this.keepAlivePeriod);
             }
-            catch (MqttTimeoutException)
+            catch (Exception)
             {
                 this.isKeepAliveTimeout = true;
                 // client must close connection
@@ -626,7 +626,8 @@ namespace uPLibrary.Networking.M2Mqtt
             else
             {
                 // throw timeout exception
-                throw new MqttTimeoutException();
+                //throw new MqttTimeoutException();
+                throw new MqttCommunicationException();
             }
         }
 
