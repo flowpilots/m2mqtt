@@ -4,8 +4,9 @@ using System.Net.Sockets;
 using System.Threading;
 using uPLibrary.Networking.M2Mqtt.Exceptions;
 using uPLibrary.Networking.M2Mqtt.Messages;
-#if SSL
 #if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
+using Microsoft.SPOT;
+#if SSL
 using Microsoft.SPOT.Net.Security;
 #else
 using System.Security.Authentication;
@@ -78,6 +79,8 @@ namespace uPLibrary.Networking.M2Mqtt
         // thread for sending keep alive message
         Thread keepAliveThread;
         AutoResetEvent keepAliveEvent;
+        // keep alive timeout expired
+        bool isKeepAliveTimeout;
         // last message sent ticks
         long lastSend;
 
@@ -91,10 +94,10 @@ namespace uPLibrary.Networking.M2Mqtt
         public event MqttMsgUnsubscribedEventHandler MqttMsgUnsubscribed;
 
         /// <summary>
-        /// Connection state between client and broker
+        /// Connection status between client and broker
         /// </summary>
         public bool IsConnected { get; private set; }
-
+        
         // channel to communicate over the network
         private MqttNetworkChannel channel;
 
@@ -232,13 +235,13 @@ namespace uPLibrary.Networking.M2Mqtt
             // if connection accepted, start keep alive timer
             if (connack.ReturnCode == MqttMsgConnack.CONN_ACCEPTED)
             {
-                this.IsConnected = true;
-
                 this.keepAlivePeriod = keepAlivePeriod * 1000; // convert in ms
                 
                 // start thread for sending keep alive message to the broker
                 this.keepAliveThread = new Thread(this.KeepAliveThread);
                 this.keepAliveThread.Start();
+
+                this.IsConnected = true;
             }
             return connack.ReturnCode;
         }
@@ -264,13 +267,20 @@ namespace uPLibrary.Networking.M2Mqtt
             this.isRunning = false;
             this.receiveThread.Join();
 
-            // unlock keep alive thread and wait
-            this.keepAliveEvent.Set();
-            this.keepAliveThread.Join();
+            // avoid dedalock if keep alive timeout expired
+            if (!this.isKeepAliveTimeout)
+            {
+                // unlock keep alive thread and wait
+                this.keepAliveEvent.Set();
+                this.keepAliveThread.Join();
+            }
 
             // close network channel
             this.channel.Close();
-            this.IsConnected = false;
+
+            // keep alive thread will set it gracefully
+            if (!this.isKeepAliveTimeout)
+                this.IsConnected = false;
         }
 
         /// <summary>
@@ -287,6 +297,7 @@ namespace uPLibrary.Networking.M2Mqtt
             }
             catch (MqttTimeoutException)
             {
+                this.isKeepAliveTimeout = true;
                 // client must close connection
                 this.Close();
                 return null;
@@ -552,7 +563,7 @@ namespace uPLibrary.Networking.M2Mqtt
                     new MqttMsgUnsubscribedEventArgs(messageId));
             }
         }
-
+        
         /// <summary>
         /// Send a message to the broker
         /// </summary>
@@ -783,6 +794,7 @@ namespace uPLibrary.Networking.M2Mqtt
         {
             long now = 0;
             int wait = this.keepAlivePeriod;
+            this.isKeepAliveTimeout = false;
 
             while (this.isRunning)
             {
@@ -804,6 +816,9 @@ namespace uPLibrary.Networking.M2Mqtt
 					}
                 }
             }
+
+            if (this.isKeepAliveTimeout)
+                this.IsConnected = false;
         }
     }
 }
