@@ -19,7 +19,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         public string Topic
         {
             get { return this.topic; }
-            set { this.topic = value; }
+            internal set { this.topic = value; }
         }
 
         /// <summary>
@@ -28,7 +28,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         public byte[] Message
         {
             get { return this.message; }
-            set { this.message = value; }
+            internal set { this.message = value; }
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         public byte QosLevel
         {
             get { return this.qosLevel; }
-            set { this.qosLevel = value; }
+            internal set { this.qosLevel = value; }
         }
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         public bool Retain
         {
             get { return this.retain; }
-            set { this.retain = value; }
+            internal set { this.retain = value; }
         }
 
         #endregion

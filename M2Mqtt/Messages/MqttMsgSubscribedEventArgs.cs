@@ -19,7 +19,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         public ushort MessageId
         {
             get { return this.messageId; }
-            set { this.messageId = value; }
+            internal set { this.messageId = value; }
         }
 
         /// <summary>
@@ -28,7 +28,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         public byte[] GrantedQoSLevels
         {
             get { return this.grantedQosLevels; }
-            set { this.grantedQosLevels = value; }
+            internal set { this.grantedQosLevels = value; }
         }
 
         #endregion

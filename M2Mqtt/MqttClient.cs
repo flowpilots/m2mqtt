@@ -4,11 +4,15 @@ using System.Net.Sockets;
 using System.Threading;
 using uPLibrary.Networking.M2Mqtt.Exceptions;
 using uPLibrary.Networking.M2Mqtt.Messages;
+// if .Net Micro Framework
 #if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
 using Microsoft.SPOT;
 #if SSL
 using Microsoft.SPOT.Net.Security;
+#endif
+// else other frameworks (.Net, .Net Compact or Mono)
 #else
+#if SSL
 using System.Security.Authentication;
 using System.Net.Security;
 #endif
@@ -265,14 +269,18 @@ namespace uPLibrary.Networking.M2Mqtt
         {
             // stop receiving thread and keep alive thread
             this.isRunning = false;
-            this.receiveThread.Join();
+
+            if (this.receiveThread != null)
+                this.receiveThread.Join();
 
             // avoid dedalock if keep alive timeout expired
             if (!this.isKeepAliveTimeout)
             {
                 // unlock keep alive thread and wait
                 this.keepAliveEvent.Set();
-                this.keepAliveThread.Join();
+
+                if (this.keepAliveThread != null)
+                    this.keepAliveThread.Join();
             }
 
             // close network channel
@@ -520,8 +528,11 @@ namespace uPLibrary.Networking.M2Mqtt
         {
             if (this.MqttMsgPublishReceived != null)
             {
-                this.MqttMsgPublishReceived(this, 
-                    new MqttMsgPublishEventArgs(publish.Topic, publish.Message, publish.QosLevel, publish.Retain));
+                Thread threadEvent = 
+                    new Thread(() => this.MqttMsgPublishReceived(this, 
+                        new MqttMsgPublishEventArgs(publish.Topic, publish.Message, publish.QosLevel, publish.Retain)));
+
+                threadEvent.Start();
             }
         }
 
@@ -533,8 +544,11 @@ namespace uPLibrary.Networking.M2Mqtt
         {
             if (this.MqttMsgPublished != null)
             {
-                this.MqttMsgPublished(this,
-                    new MqttMsgPublishedEventArgs(messageId));
+                Thread threadEvent =  
+                    new Thread(() => this.MqttMsgPublished(this, 
+                        new MqttMsgPublishedEventArgs(messageId)));
+
+                threadEvent.Start();
             }
         }
 
@@ -546,8 +560,11 @@ namespace uPLibrary.Networking.M2Mqtt
         {
             if (this.MqttMsgSubscribed != null)
             {
-                this.MqttMsgSubscribed(this,
-                    new MqttMsgSubscribedEventArgs(suback.MessageId, suback.GrantedQoSLevels));
+                Thread threadEvent = 
+                    new Thread(() => this.MqttMsgSubscribed(this, 
+                        new MqttMsgSubscribedEventArgs(suback.MessageId, suback.GrantedQoSLevels)));
+                
+                threadEvent.Start();
             }
         }
 
@@ -559,8 +576,11 @@ namespace uPLibrary.Networking.M2Mqtt
         {
             if (this.MqttMsgUnsubscribed != null)
             {
-                this.MqttMsgUnsubscribed(this,
-                    new MqttMsgUnsubscribedEventArgs(messageId));
+                Thread threadEvent =
+                    new Thread(() => this.MqttMsgUnsubscribed(this, 
+                        new MqttMsgUnsubscribedEventArgs(messageId)));
+
+                threadEvent.Start();
             }
         }
         

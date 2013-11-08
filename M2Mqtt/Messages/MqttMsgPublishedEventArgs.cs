@@ -19,7 +19,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         public ushort MessageId
         {
             get { return this.messageId; }
-            set { this.messageId = value; }
+            internal set { this.messageId = value; }
         }
 
         #endregion
