@@ -11,6 +11,12 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
     {
         #region Constants...
 
+        // protocol name supported
+        internal const string PROTOCOL_NAME = "MQIsdp";
+
+        // max length for client id
+        internal const int CLIENT_ID_MAX_LENGTH = 23;
+
         // variable header fields
         internal const byte PROTOCOL_NAME_LEN_SIZE = 2;
         internal const byte PROTOCOL_NAME_SIZE = 6;
@@ -45,6 +51,24 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         #endregion
 
         #region Properties...
+
+        /// <summary>
+        /// Protocol name
+        /// </summary>
+        public string ProtocolName
+        {
+            get { return this.protocolName; }
+            set { this.protocolName = value; }
+        }
+
+        /// <summary>
+        /// Protocol version
+        /// </summary>
+        public byte ProtocolVersion
+        {
+            get { return this.protocolVersion; }
+            set { this.protocolVersion = value; }
+        }
 
         /// <summary>
         /// Client identifier
@@ -137,7 +161,11 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         }
 
         #endregion
-        
+
+        // protocol name
+        private string protocolName;
+        // protocol version
+        private byte protocolVersion;
         // client identifier
         private string clientId;
         // will retain flag
@@ -162,6 +190,23 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// <summary>
         /// Constructor
         /// </summary>
+        public MqttMsgConnect()
+        {
+            this.type = MQTT_MSG_CONNECT_TYPE;
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="clientId">Client identifier</param>
+        public MqttMsgConnect(string clientId) :
+            this(clientId, null, null, false, QOS_LEVEL_AT_LEAST_ONCE, false, null, null, true, KEEP_ALIVE_PERIOD_DEFAULT)
+        {
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
         /// <param name="clientId">Client identifier</param>
         /// <param name="username">Username</param>
         /// <param name="password">Password</param>
@@ -173,15 +218,15 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// <param name="cleanSession">Clean sessione flag</param>
         /// <param name="keepAlivePeriod">Keep alive period</param>
         public MqttMsgConnect(string clientId, 
-            string username = null, 
-            string password = null,
-            bool willRetain = false,
-            byte willQosLevel = QOS_LEVEL_AT_LEAST_ONCE,
-            bool willFlag = false,
-            string willTopic = null,
-            string willMessage = null,
-            bool cleanSession = true,
-            ushort keepAlivePeriod = KEEP_ALIVE_PERIOD_DEFAULT
+            string username, 
+            string password,
+            bool willRetain,
+            byte willQosLevel,
+            bool willFlag,
+            string willTopic,
+            string willMessage,
+            bool cleanSession,
+            ushort keepAlivePeriod
             )
         {
             this.type = MQTT_MSG_CONNECT_TYPE;
@@ -196,6 +241,115 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             this.willMessage = willMessage;
             this.cleanSession = cleanSession;
             this.keepAlivePeriod = keepAlivePeriod;
+        }
+
+        /// <summary>
+        /// Parse bytes for a CONNECT message
+        /// </summary>
+        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
+        /// <param name="channel">Channel connected to the broker</param>
+        /// <returns>CONNECT message instance</returns>
+        public static MqttMsgConnect Parse(byte fixedHeaderFirstByte, IMqttNetworkChannel channel)
+        {
+            byte[] buffer;
+            int index = 0;
+            int protNameUtf8Length;
+            byte[] protNameUtf8;
+            bool isUsernameFlag;
+            bool isPasswordFlag;
+            int clientIdUtf8Length;
+            byte[] clientIdUtf8;
+            int willTopicUtf8Length;
+            byte[] willTopicUtf8;
+            int willMessageUtf8Length;
+            byte[] willMessageUtf8;
+            int usernameUtf8Length;
+            byte[] usernameUtf8;
+            int passwordUtf8Length;
+            byte[] passwordUtf8;
+            MqttMsgConnect msg = new MqttMsgConnect();
+            
+            // get remaining length and allocate buffer
+            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
+            buffer = new byte[remainingLength];
+
+            // read bytes from socket...
+            channel.Receive(buffer);
+
+            // protocol name
+            protNameUtf8Length = ((buffer[index++] << 8) & 0xFF00);
+            protNameUtf8Length |= buffer[index++];
+            protNameUtf8 = new byte[protNameUtf8Length];
+            Array.Copy(buffer, index, protNameUtf8, 0, protNameUtf8Length);
+            index += protNameUtf8Length;
+            msg.protocolName = new String(Encoding.UTF8.GetChars(protNameUtf8));
+
+            // protocol version
+            msg.protocolVersion = buffer[index];
+            index += PROTOCOL_VERSION_NUMBER_SIZE;
+
+            // connect flags
+            isUsernameFlag = (buffer[index] & USERNAME_FLAG_MASK) != 0x00;
+            isPasswordFlag = (buffer[index] & PASSWORD_FLAG_MASK) != 0x00;
+            msg.willRetain = (buffer[index] & WILL_RETAIN_FLAG_MASK) != 0x00;
+            msg.willQosLevel = (byte)((buffer[index] & WILL_QOS_FLAG_MASK) >> WILL_QOS_FLAG_OFFSET);
+            msg.willFlag = (buffer[index] & WILL_FLAG_MASK) != 0x00;
+            msg.cleanSession = (buffer[index] & CLEAN_SESSION_FLAG_MASK) != 0x00;
+            index += CONNECT_FLAGS_SIZE;
+
+            // keep alive timer
+            msg.keepAlivePeriod = (ushort)((buffer[index++] << 8) & 0xFF00);
+            msg.keepAlivePeriod |= buffer[index++];
+
+            // client identifier
+            clientIdUtf8Length = ((buffer[index++] << 8) & 0xFF00);
+            clientIdUtf8Length |= buffer[index++];
+            clientIdUtf8 = new byte[clientIdUtf8Length];
+            Array.Copy(buffer, index, clientIdUtf8, 0, clientIdUtf8Length);
+            index += clientIdUtf8Length;
+            msg.clientId = new String(Encoding.UTF8.GetChars(clientIdUtf8));
+
+            // will topic and will message
+            if (msg.willFlag)
+            {
+                willTopicUtf8Length = ((buffer[index++] << 8) & 0xFF00);
+                willTopicUtf8Length |= buffer[index++];
+                willTopicUtf8 = new byte[willTopicUtf8Length];
+                Array.Copy(buffer, index, willTopicUtf8, 0, willTopicUtf8Length);
+                index += willTopicUtf8Length;
+                msg.willTopic = new String(Encoding.UTF8.GetChars(willTopicUtf8));
+
+                willMessageUtf8Length = ((buffer[index++] << 8) & 0xFF00);
+                willMessageUtf8Length |= buffer[index++];
+                willMessageUtf8 = new byte[willMessageUtf8Length];
+                Array.Copy(buffer, index, willMessageUtf8, 0, willMessageUtf8Length);
+                index += willMessageUtf8Length;
+                msg.willMessage = new String(Encoding.UTF8.GetChars(willMessageUtf8));
+            }
+
+            // username
+            if (isUsernameFlag)
+            {
+                usernameUtf8Length = ((buffer[index++] << 8) & 0xFF00);
+                usernameUtf8Length |= buffer[index++];
+                usernameUtf8 = new byte[usernameUtf8Length];
+                Array.Copy(buffer, index, usernameUtf8, 0, usernameUtf8Length);
+                index += usernameUtf8Length;
+                msg.username = new String(Encoding.UTF8.GetChars(usernameUtf8));
+            }
+
+            // password
+            if (isPasswordFlag)
+            {
+                passwordUtf8Length = ((buffer[index++] << 8) & 0xFF00);
+                passwordUtf8Length |= buffer[index++];
+                passwordUtf8 = new byte[passwordUtf8Length];
+                Array.Copy(buffer, index, passwordUtf8, 0, passwordUtf8Length);
+                index += passwordUtf8Length;
+                msg.password = new String(Encoding.UTF8.GetChars(passwordUtf8));
+            }
+
+            return msg;
         }
 
         public override byte[] GetBytes()

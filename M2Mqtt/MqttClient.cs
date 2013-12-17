@@ -12,12 +12,15 @@ using Microsoft.SPOT.Net.Security;
 #endif
 // else other frameworks (.Net, .Net Compact or Mono)
 #else
+using System.Collections.Generic;
 #if SSL
 using System.Security.Authentication;
 using System.Net.Security;
 #endif
 #endif
+
 using System.Security.Cryptography.X509Certificates;
+using System.Collections;
 
 namespace uPLibrary.Networking.M2Mqtt
 {
@@ -103,7 +106,19 @@ namespace uPLibrary.Networking.M2Mqtt
         public bool IsConnected { get; private set; }
         
         // channel to communicate over the network
-        private MqttNetworkChannel channel;
+        private IMqttNetworkChannel channel;
+
+        // current message identifier generated
+        private ushort messageIdCounter = 0;
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="brokerIpAddress">Broker IP address</param>
+        public MqttClient(IPAddress brokerIpAddress) :
+            this(brokerIpAddress, MQTT_BROKER_DEFAULT_PORT, false, null)
+        {
+        }
 
         /// <summary>
         /// Constructor
@@ -112,9 +127,18 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="brokerPort">Broker port</param>
         /// <param name="secure">Using secure connection</param>
         /// <param name="caCert">CA certificate for secure connection</param>
-        public MqttClient(IPAddress brokerIpAddress, int brokerPort = MQTT_BROKER_DEFAULT_PORT, bool secure = false, X509Certificate caCert = null)
+        public MqttClient(IPAddress brokerIpAddress, int brokerPort, bool secure, X509Certificate caCert)
         {
             this.Init(null, brokerIpAddress, brokerPort, secure, caCert);
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="brokerHostName">Broker Host Name</param>
+        public MqttClient(string brokerHostName) :
+            this(brokerHostName, MQTT_BROKER_DEFAULT_PORT, false, null)
+        {
         }
 
         /// <summary>
@@ -124,7 +148,7 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="brokerPort">Broker port</param>
         /// <param name="secure">Using secure connection</param>
         /// <param name="caCert">CA certificate for secure connection</param>
-        public MqttClient(string brokerHostName, int brokerPort = MQTT_BROKER_DEFAULT_PORT, bool secure = false, X509Certificate caCert = null)
+        public MqttClient(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert)
         {
             // throw exceptions to the caller
             IPHostEntry hostEntry = Dns.GetHostEntry(brokerHostName);
@@ -185,6 +209,16 @@ namespace uPLibrary.Networking.M2Mqtt
         /// Connect to broker
         /// </summary>
         /// <param name="clientId">Client identifier</param>
+        /// <returns>Return code of CONNACK message from broker</returns>
+        public byte Connect(string clientId)
+        {
+            return this.Connect(clientId, null, null, false, MqttMsgConnect.QOS_LEVEL_AT_LEAST_ONCE, false, null, null, true, MqttMsgConnect.KEEP_ALIVE_PERIOD_DEFAULT);
+        }
+        
+        /// <summary>
+        /// Connect to broker
+        /// </summary>
+        /// <param name="clientId">Client identifier</param>
         /// <param name="username">Username</param>
         /// <param name="password">Password</param>
         /// <param name="willRetain">Will retain flag</param>
@@ -196,15 +230,15 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="keepAlivePeriod">Keep alive period</param>
         /// <returns>Return code of CONNACK message from broker</returns>
         public byte Connect(string clientId, 
-            string username = null,
-            string password = null,
-            bool willRetain = false,
-            byte willQosLevel = MqttMsgConnect.QOS_LEVEL_AT_LEAST_ONCE,
-            bool willFlag = false,
-            string willTopic = null,
-            string willMessage = null,
-            bool cleanSession = true,
-            ushort keepAlivePeriod = MqttMsgConnect.KEEP_ALIVE_PERIOD_DEFAULT)
+            string username,
+            string password,
+            bool willRetain,
+            byte willQosLevel,
+            bool willFlag,
+            string willTopic,
+            string willMessage,
+            bool cleanSession,
+            ushort keepAlivePeriod)
         {
             // create CONNECT message
             MqttMsgConnect connect = new MqttMsgConnect(clientId,
@@ -270,6 +304,7 @@ namespace uPLibrary.Networking.M2Mqtt
             // stop receiving thread and keep alive thread
             this.isRunning = false;
 
+            // wait end receive thread
             if (this.receiveThread != null)
                 this.receiveThread.Join();
 
@@ -325,6 +360,7 @@ namespace uPLibrary.Networking.M2Mqtt
 
             MqttMsgSubscribe subscribe =
                 new MqttMsgSubscribe(topics, qosLevels);
+            subscribe.MessageId = this.GetMessageId();
 
             MqttMsgSuback suback = null;
             do
@@ -362,6 +398,7 @@ namespace uPLibrary.Networking.M2Mqtt
 
             MqttMsgUnsubscribe unsubscribe =
                 new MqttMsgUnsubscribe(topics);
+            unsubscribe.MessageId = this.GetMessageId();
 
             MqttMsgUnsuback unsuback = null;
             do
@@ -394,12 +431,23 @@ namespace uPLibrary.Networking.M2Mqtt
         /// </summary>
         /// <param name="topic">Message topic</param>
         /// <param name="message">Message data (payload)</param>
+        /// <returns>Message Id related to PUBLISH message</returns>
+        public ushort Publish(string topic, byte[] message)
+        {
+            return this.Publish(topic, message, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+        }
+
+        /// <summary>
+        /// Publish a message to the broker
+        /// </summary>
+        /// <param name="topic">Message topic</param>
+        /// <param name="message">Message data (payload)</param>
         /// <param name="qosLevel">QoS Level</param>
         /// <param name="retain">Retain flag</param>
         /// <returns>Message Id related to PUBLISH message</returns>
         public ushort Publish(string topic, byte[] message, 
-            byte qosLevel = MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, 
-            bool retain = false)
+            byte qosLevel, 
+            bool retain)
         {
             ushort messageId = 0;
             int attempts = 0;
@@ -407,6 +455,7 @@ namespace uPLibrary.Networking.M2Mqtt
 
             MqttMsgPublish publish = 
                 new MqttMsgPublish(topic, message, false, qosLevel, retain);
+            publish.MessageId = this.GetMessageId();
 
             // based on QoS level, the messages flow between client and broker changes
             switch (qosLevel)
@@ -608,9 +657,19 @@ namespace uPLibrary.Networking.M2Mqtt
         /// Send a message to the broker and wait answer
         /// </summary>
         /// <param name="msgBytes">Message bytes</param>
+        /// <returns>MQTT message response</returns>
+        private MqttMsgBase SendReceive(byte[] msgBytes)
+        {
+            return this.SendReceive(msgBytes, MQTT_DEFAULT_TIMEOUT);
+        }
+
+        /// <summary>
+        /// Send a message to the broker and wait answer
+        /// </summary>
+        /// <param name="msgBytes">Message bytes</param>
         /// <param name="timeout">Timeout for receiving answer</param>
         /// <returns>MQTT message response</returns>
-        private MqttMsgBase SendReceive(byte[] msgBytes, int timeout = MQTT_DEFAULT_TIMEOUT)
+        private MqttMsgBase SendReceive(byte[] msgBytes, int timeout)
         {
             // reset handle before sending
             this.endReceiving.Reset();
@@ -633,8 +692,13 @@ namespace uPLibrary.Networking.M2Mqtt
                 throw new MqttCommunicationException();
             }
 
+#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
             // wait for answer from broker
             if (this.endReceiving.WaitOne(timeout, false))
+#else
+            // wait for answer from broker
+            if (this.endReceiving.WaitOne(timeout))
+#endif
             {
                 // message received without exception
                 if (this.exReceiving == null)
@@ -819,8 +883,13 @@ namespace uPLibrary.Networking.M2Mqtt
 
             while (this.isRunning)
             {
+#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
                 // waiting...
                 this.keepAliveEvent.WaitOne(wait, false);
+#else
+                // waiting...
+                this.keepAliveEvent.WaitOne(wait);
+#endif
 
                 if (this.isRunning)
                 {
@@ -840,6 +909,19 @@ namespace uPLibrary.Networking.M2Mqtt
 
             if (this.isKeepAliveTimeout)
                 this.IsConnected = false;
+        }
+
+        /// <summary>
+        /// Generate the next message identifier
+        /// </summary>
+        /// <returns>Message identifier</returns>
+        private ushort GetMessageId()
+        {
+            if (this.messageIdCounter == 0)
+                this.messageIdCounter++;
+            else
+                this.messageIdCounter = ((this.messageIdCounter % UInt16.MaxValue) != 0) ? (ushort)(this.messageIdCounter + 1) : (ushort)0;
+            return this.messageIdCounter;
         }
     }
 }

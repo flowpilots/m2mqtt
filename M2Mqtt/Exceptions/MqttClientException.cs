@@ -77,6 +77,11 @@ namespace uPLibrary.Networking.M2Mqtt.Exceptions
         /// <summary>
         /// Wrong message from broker
         /// </summary>
-        WrongBrokerMessage
+        WrongBrokerMessage,
+
+        /// <summary>
+        /// Wrong Message Id
+        /// </summary>
+        WrongMessageId
     }
 }

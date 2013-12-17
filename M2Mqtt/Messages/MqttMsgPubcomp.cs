@@ -1,5 +1,3 @@
-using System.Net.Sockets;
-
 namespace uPLibrary.Networking.M2Mqtt.Messages
 {
     /// <summary>
@@ -61,7 +59,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             buffer = new byte[fixedHeaderSize + varHeaderSize + payloadSize];
 
             // first fixed header byte
-            buffer[index++] = (MQTT_MSG_PUBREC_TYPE << MSG_TYPE_OFFSET);
+            buffer[index++] = (MQTT_MSG_PUBCOMP_TYPE << MSG_TYPE_OFFSET);
 
             // encode remaining length
             index = this.encodeRemainingLength(remainingLength, buffer, index);
@@ -79,7 +77,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
         /// <param name="channel">Channel connected to the broker</param>
         /// <returns>PUBCOMP message instance</returns>
-        public static MqttMsgPubcomp Parse(byte fixedHeaderFirstByte, MqttNetworkChannel channel)
+        public static MqttMsgPubcomp Parse(byte fixedHeaderFirstByte, IMqttNetworkChannel channel)
         {
             byte[] buffer;
             int index = 0;

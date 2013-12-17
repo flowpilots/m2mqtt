@@ -15,7 +15,7 @@ namespace uPLibrary.Networking.M2Mqtt
     /// <summary>
     /// Channel to communicate over the network
     /// </summary>
-    public class MqttNetworkChannel
+    public class MqttNetworkChannel : IMqttNetworkChannel
     {
         // remote host information
         private string remoteHostName;
@@ -84,9 +84,20 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="remoteHostName">Remote Host name</param>
         /// <param name="remoteIpAddress">Remote IP address</param>
         /// <param name="remotePort">Remote port</param>
+        public MqttNetworkChannel(string remoteHostName, IPAddress remoteIpAddress, int remotePort) :
+            this(remoteHostName, remoteIpAddress, remotePort, false, null)
+        {
+        }
+        
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="remoteHostName">Remote Host name</param>
+        /// <param name="remoteIpAddress">Remote IP address</param>
+        /// <param name="remotePort">Remote port</param>
         /// <param name="secure">Using SSL</param>
         /// <param name="caCert">CA certificate</param>
-        public MqttNetworkChannel(string remoteHostName, IPAddress remoteIpAddress, int remotePort, bool secure = false, X509Certificate caCert = null)
+        public MqttNetworkChannel(string remoteHostName, IPAddress remoteIpAddress, int remotePort, bool secure, X509Certificate caCert)
         {
             this.remoteHostName = remoteHostName;
             this.remoteIpAddress = remoteIpAddress;

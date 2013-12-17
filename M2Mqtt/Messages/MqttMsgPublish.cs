@@ -1,5 +1,4 @@
 using System;
-using System.Net.Sockets;
 using System.Text;
 using uPLibrary.Networking.M2Mqtt.Exceptions;
 
@@ -61,15 +60,27 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// </summary>
         /// <param name="topic">Message topic</param>
         /// <param name="message">Message data</param>
+        public MqttMsgPublish(string topic, byte[] message) :
+            this(topic, message, false, QOS_LEVEL_AT_MOST_ONCE, false)
+        {
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="topic">Message topic</param>
+        /// <param name="message">Message data</param>
         /// <param name="dupFlag">Duplicate flag</param>
         /// <param name="qosLevel">Quality of Service level</param>
         /// <param name="retain">Retain flag</param>
         public MqttMsgPublish(string topic,
             byte[] message,
-            bool dupFlag = false,
-            byte qosLevel = QOS_LEVEL_AT_MOST_ONCE,
-            bool retain = false) : base()
+            bool dupFlag,
+            byte qosLevel,
+            bool retain) : base()
         {
+            this.type = MQTT_MSG_PUBLISH_TYPE;
+
             this.topic = topic;
             this.message = message;
             this.dupFlag = dupFlag;
@@ -149,7 +160,9 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             if ((this.qosLevel == QOS_LEVEL_AT_LEAST_ONCE) ||
                 (this.qosLevel == QOS_LEVEL_EXACTLY_ONCE))
             {
-                this.messageId = this.GetMessageId();
+                // check message identifier assigned
+                if (this.messageId == 0)
+                    throw new MqttClientException(MqttClientErrorCode.WrongMessageId);
                 buffer[index++] = (byte)((this.messageId >> 8) & 0x00FF); // MSB
                 buffer[index++] = (byte)(this.messageId & 0x00FF); // LSB
             }
@@ -171,7 +184,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
         /// <param name="channel">Channel connected to the broker</param>
         /// <returns>PUBLISH message instance</returns>
-        public static MqttMsgPublish Parse(byte fixedHeaderFirstByte, MqttNetworkChannel channel)
+        public static MqttMsgPublish Parse(byte fixedHeaderFirstByte, IMqttNetworkChannel channel)
         {
             byte[] buffer;
             int index = 0;

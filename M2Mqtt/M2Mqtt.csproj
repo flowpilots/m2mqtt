@@ -44,6 +44,7 @@
     <Compile Include="Exceptions\MqttCommunicationException.cs" />
     <Compile Include="Exceptions\MqttConnectionException.cs" />
     <Compile Include="Exceptions\MqttTimeoutException.cs" />
+    <Compile Include="IMqttNetworkChannel.cs" />
     <Compile Include="Messages\MqttMsgBase.cs" />
     <Compile Include="Messages\MqttMsgConnack.cs" />
     <Compile Include="Messages\MqttMsgConnect.cs" />

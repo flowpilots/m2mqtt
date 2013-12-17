@@ -25,5 +25,22 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
 
             return buffer;
         }
+
+        /// <summary>
+        /// Parse bytes for a PINGREQ message
+        /// </summary>
+        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
+        /// <param name="channel">Channel connected to the broker</param>
+        /// <returns>PINGREQ message instance</returns>
+        public static MqttMsgPingReq Parse(byte fixedHeaderFirstByte, IMqttNetworkChannel channel)
+        {
+            MqttMsgPingReq msg = new MqttMsgPingReq();
+
+            // already know remaininglength is zero (MQTT specification),
+            // so it isn't necessary to read other data from socket
+            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
+
+            return msg;
+        }
     }
 }

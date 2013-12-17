@@ -1,4 +1,9 @@
 using System;
+// if NOT .Net Micro Framework
+#if (!MF_FRAMEWORK_VERSION_V4_2 && !MF_FRAMEWORK_VERSION_V4_3)
+using System.Collections.Generic;
+#endif
+using System.Collections;
 using System.Text;
 using uPLibrary.Networking.M2Mqtt.Exceptions;
 
@@ -46,6 +51,14 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         byte[] qosLevels;
         // message identifier
         ushort messageId;
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public MqttMsgSubscribe()
+        {
+            this.type = MQTT_MSG_SUBSCRIBE_TYPE;
+        }
         
         /// <summary>
         /// Constructor
@@ -61,6 +74,77 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
 
             // SUBSCRIBE message uses QoS Level 1
             this.qosLevel = QOS_LEVEL_AT_LEAST_ONCE;
+        }
+
+        /// <summary>
+        /// Parse bytes for a SUBSCRIBE message
+        /// </summary>
+        /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
+        /// <param name="channel">Channel connected to the broker</param>
+        /// <returns>SUBSCRIBE message instance</returns>
+        public static MqttMsgSubscribe Parse(byte fixedHeaderFirstByte, IMqttNetworkChannel channel)
+        {
+            byte[] buffer;
+            int index = 0;
+            byte[] topicUtf8;
+            int topicUtf8Length;
+            MqttMsgSubscribe msg = new MqttMsgSubscribe();
+
+            // get remaining length and allocate buffer
+            int remainingLength = MqttMsgBase.decodeRemainingLength(channel);
+            buffer = new byte[remainingLength];
+
+            // read bytes from socket...
+            int received = channel.Receive(buffer);
+
+            // read QoS level from fixed header
+            msg.qosLevel = (byte)((fixedHeaderFirstByte & QOS_LEVEL_MASK) >> QOS_LEVEL_OFFSET);
+            // read DUP flag from fixed header
+            msg.dupFlag = (((fixedHeaderFirstByte & DUP_FLAG_MASK) >> DUP_FLAG_OFFSET) == 0x01);
+            // retain flag not used
+            msg.retain = false;
+
+            // message id
+            msg.messageId = (ushort)((buffer[index++] << 8) & 0xFF00);
+            msg.messageId |= (buffer[index++]);
+
+            // payload contains topics and QoS levels
+            // NOTE : before, I don't know how many topics will be in the payload (so use List)
+
+// if .Net Micro Framework
+#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
+            IList tmpTopics = new ArrayList();
+            IList tmpQosLevels = new ArrayList();
+// else other frameworks (.Net, .Net Compact, Mono, Windows Phone) 
+#else
+            IList<String> tmpTopics = new List<String>();
+            IList<byte> tmpQosLevels = new List<byte>();
+#endif
+            do
+            {
+                // topic name
+                topicUtf8Length = ((buffer[index++] << 8) & 0xFF00);
+                topicUtf8Length |= buffer[index++];
+                topicUtf8 = new byte[topicUtf8Length];
+                Array.Copy(buffer, index, topicUtf8, 0, topicUtf8Length);
+                index += topicUtf8Length;
+                tmpTopics.Add(new String(Encoding.UTF8.GetChars(topicUtf8)));
+
+                // QoS level
+                tmpQosLevels.Add(buffer[index++]);
+
+            } while (index < remainingLength);
+
+            // copy from list to array
+            msg.topics = new string[tmpTopics.Count];
+            msg.qosLevels = new byte[tmpQosLevels.Count];
+            for (int i = 0; i < tmpTopics.Count; i++)
+            {
+                msg.topics[i] = (string)tmpTopics[i];
+                msg.qosLevels[i] = (byte)tmpQosLevels[i];
+            }
+
+            return msg;
         }
 
         public override byte[] GetBytes()
@@ -128,8 +212,9 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             // encode remaining length
             index = this.encodeRemainingLength(remainingLength, buffer, index);
 
-            // get next message identifier (SUBSCRIBE uses QoS Level 1, so message id is mandatory)
-            this.messageId = this.GetMessageId();
+            // check message identifier assigned (SUBSCRIBE uses QoS Level 1, so message id is mandatory)
+            if (this.messageId == 0)
+                throw new MqttClientException(MqttClientErrorCode.WrongMessageId);
             buffer[index++] = (byte)((messageId >> 8) & 0x00FF); // MSB
             buffer[index++] = (byte)(messageId & 0x00FF); // LSB 
 

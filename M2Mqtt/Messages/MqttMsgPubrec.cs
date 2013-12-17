@@ -1,5 +1,3 @@
-using System.Net.Sockets;
-
 namespace uPLibrary.Networking.M2Mqtt.Messages
 {
     /// <summary>
@@ -79,7 +77,7 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         /// <param name="fixedHeaderFirstByte">First fixed header byte</param>
         /// <param name="channel">Channel connected to the broker</param>
         /// <returns>PUBREC message instance</returns>
-        public static MqttMsgPubrec Parse(byte fixedHeaderFirstByte, MqttNetworkChannel channel)
+        public static MqttMsgPubrec Parse(byte fixedHeaderFirstByte, IMqttNetworkChannel channel)
         {
             byte[] buffer;
             int index = 0;
