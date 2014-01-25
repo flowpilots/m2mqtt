@@ -10,10 +10,10 @@ using Microsoft.SPOT;
 #if SSL
 using Microsoft.SPOT.Net.Security;
 #endif
-// else other frameworks (.Net, .Net Compact or Mono)
+// else other frameworks (.Net, .Net Compact, Mono, Windows Phone) 
 #else
 using System.Collections.Generic;
-#if SSL
+#if (SSL && !WINDOWS_PHONE)
 using System.Security.Authentication;
 using System.Net.Security;
 #endif
@@ -53,7 +53,7 @@ namespace uPLibrary.Networking.M2Mqtt
         public const int MQTT_BROKER_DEFAULT_PORT = 1883;
         public const int MQTT_BROKER_DEFAULT_SSL_PORT = 8883;
         // default timeout on receiving from broker
-        public const int MQTT_DEFAULT_TIMEOUT = 5000;
+        public const int MQTT_DEFAULT_TIMEOUT = 500000;
         // max publish, subscribe and unsubscribe retry for QoS Level 1 or 2
         private const int MQTT_ATTEMPTS_RETRY = 3;
         // delay for retry publish, subscribe and unsubscribe for QoS Level 1 or 2
@@ -255,7 +255,11 @@ namespace uPLibrary.Networking.M2Mqtt
             try
             {
                 // create network channel and connect to broker
+#if WINDOWS_PHONE
+                this.channel = new WPMqttNetworkChannel(this.brokerHostName, this.brokerIpAddress, this.brokerPort, this.secure, this.caCert);
+#else
                 this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerIpAddress, this.brokerPort, this.secure, this.caCert);
+#endif
                 this.channel.Connect();                
             }
             catch (Exception ex)
@@ -696,6 +700,7 @@ namespace uPLibrary.Networking.M2Mqtt
             // wait for answer from broker
             if (this.endReceiving.WaitOne(timeout, false))
 #else
+            System.Diagnostics.Debug.WriteLine("WaitOne");
             // wait for answer from broker
             if (this.endReceiving.WaitOne(timeout))
 #endif
@@ -779,7 +784,7 @@ namespace uPLibrary.Networking.M2Mqtt
 
                                 this.msgReceived = MqttMsgSuback.Parse(fixedHeaderFirstByte[0], this.channel);
                                 this.endReceiving.Set();
-
+                                
                                 // raise subscribed topic event (SUBACK message received)
                                 this.OnMqttMsgSubscribed((MqttMsgSuback)this.msgReceived);
 
