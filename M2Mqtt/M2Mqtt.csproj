@@ -48,6 +48,7 @@
     <Compile Include="Messages\MqttMsgBase.cs" />
     <Compile Include="Messages\MqttMsgConnack.cs" />
     <Compile Include="Messages\MqttMsgConnect.cs" />
+    <Compile Include="Messages\MqttMsgContext.cs" />
     <Compile Include="Messages\MqttMsgDisconnect.cs" />
     <Compile Include="Messages\MqttMsgPingReq.cs" />
     <Compile Include="Messages\MqttMsgPingResp.cs" />
@@ -66,6 +67,7 @@
     <Compile Include="Messages\MqttMsgUnsubscribedEventArgs.cs" />
     <Compile Include="MqttClient.cs" />
     <Compile Include="MqttNetworkChannel.cs" />
+    <Compile Include="MqttSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

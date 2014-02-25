@@ -38,6 +38,7 @@
     <Compile Include="Messages\MqttMsgBase.cs" />
     <Compile Include="Messages\MqttMsgConnack.cs" />
     <Compile Include="Messages\MqttMsgConnect.cs" />
+    <Compile Include="Messages\MqttMsgContext.cs" />
     <Compile Include="Messages\MqttMsgDisconnect.cs" />
     <Compile Include="Messages\MqttMsgPingReq.cs" />
     <Compile Include="Messages\MqttMsgPingResp.cs" />
@@ -56,12 +57,14 @@
     <Compile Include="Messages\MqttMsgUnsubscribedEventArgs.cs" />
     <Compile Include="MqttClient.cs" />
     <Compile Include="MqttNetworkChannel.cs" />
+    <Compile Include="MqttSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.SPOT.Native">
     </Reference>
     <Reference Include="Microsoft.SPOT.Net.Security" />
+    <Reference Include="Microsoft.SPOT.Time" />
     <Reference Include="System" />
     <Reference Include="System.Net.Security" />
   </ItemGroup>

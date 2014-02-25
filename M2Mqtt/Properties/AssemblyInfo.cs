@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Paolo Patierno")]
 [assembly: AssemblyProduct("M2Mqtt")]
-[assembly: AssemblyCopyright("Copyright © Paolo Patierno 2013")]
+[assembly: AssemblyCopyright("Copyright © Paolo Patierno 2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -21,8 +21,8 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("2.4.0.0")]
+[assembly: AssemblyVersion("3.0.0.0")]
 // to avoid compilation error (AssemblyFileVersionAttribute doesn't exist) under .Net CF 3.5
 #if !WindowsCE
-[assembly: AssemblyFileVersion("2.4.0.0")]
+[assembly: AssemblyFileVersion("3.0.0.0")]
 #endif
