@@ -98,11 +98,6 @@ namespace uPLibrary.Networking.M2Mqtt
         public event MqttMsgSubscribedEventHandler MqttMsgSubscribed;
         // event for unsubscribed topic
         public event MqttMsgUnsubscribedEventHandler MqttMsgUnsubscribed;
-
-        /// <summary>
-        /// Connection status between client and broker
-        /// </summary>
-        public bool IsConnected { get; private set; }
         
         // channel to communicate over the network
         private IMqttNetworkChannel channel;
@@ -119,6 +114,11 @@ namespace uPLibrary.Networking.M2Mqtt
 
         // current message identifier generated
         private ushort messageIdCounter = 0;
+
+        /// <summary>
+        /// Connection status between client and broker
+        /// </summary>
+        public bool IsConnected { get; private set; }
 
         /// <summary>
         /// Constructor
@@ -621,46 +621,120 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="flow">Message flow (publish, acknowledge)</param>
         private void EnqueueInflight(MqttMsgBase msg, MqttMsgFlow flow)
         {
-            // set a default state
-            MqttMsgState state = MqttMsgState.QueuedQos0;
+            // enqueue is needed (or not)
+            bool enqueue = true;
 
-            // based on QoS level, the messages flow between broker and client changes
-            switch (msg.QosLevel)
+            // if it is a PUBLISH message with QoS Level 2
+            if ((msg.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) &&
+                (msg.QosLevel == MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE))
             {
-                // QoS Level 0
-                case MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE:
+                lock (this.inflightQueue)
+                {
+                    // if it is a PUBLISH message already received (it is in the inflight queue), the publisher
+                    // re-sent it because it didn't received the PUBREC. In this case, we have to re-send PUBREC
+                    MqttMsgContextFinder msgCtxFinder = new MqttMsgContextFinder(((MqttMsgPublish)msg).MessageId);
+                    MqttMsgContext msgCtx = (MqttMsgContext)this.inflightQueue.Get(msgCtxFinder.Find);
 
-                    state = MqttMsgState.QueuedQos0;
-                    break;
-
-                // QoS Level 1
-                case MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE:
-
-                    state = MqttMsgState.QueuedQos1;
-                    break;
-
-                // QoS Level 2
-                case MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE:
-
-                    state = MqttMsgState.QueuedQos2;
-                    break;
+                    // the PUBLISH message is alredy in the inflight queue, we don't need to re-enqueue but we need
+                    // to change state to re-send PUBREC
+                    if (msgCtx != null)
+                    {
+                        msgCtx.State = MqttMsgState.QueuedQos2;
+                        msgCtx.Flow = MqttMsgFlow.ToAcknowledge;
+                        enqueue = false;
+                    }
+                }
             }
 
-            // queue message context
-            MqttMsgContext msgContext = new MqttMsgContext()
+            if (enqueue)
             {
-                Message = msg,
-                State = state,
-                Flow = flow,
-                Attempt = 0
-            };
+                // set a default state
+                MqttMsgState state = MqttMsgState.QueuedQos0;
 
-            lock (this.inflightQueue)
-            {
-                // enqueue message and unlock send thread
-                this.inflightQueue.Enqueue(msgContext);
+                // based on QoS level, the messages flow between broker and client changes
+                switch (msg.QosLevel)
+                {
+                    // QoS Level 0
+                    case MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE:
+
+                        state = MqttMsgState.QueuedQos0;
+                        break;
+
+                    // QoS Level 1
+                    case MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE:
+
+                        state = MqttMsgState.QueuedQos1;
+                        break;
+
+                    // QoS Level 2
+                    case MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE:
+
+                        state = MqttMsgState.QueuedQos2;
+                        break;
+                }
+
+                // queue message context
+                MqttMsgContext msgContext = new MqttMsgContext()
+                {
+                    Message = msg,
+                    State = state,
+                    Flow = flow,
+                    Attempt = 0
+                };
+
+                lock (this.inflightQueue)
+                {
+                    // enqueue message and unlock send thread
+                    this.inflightQueue.Enqueue(msgContext);
+                }
             }
+
             this.inflightWaitHandle.Set();
+        }
+
+        /// <summary>
+        /// Enqueue a message into the internal queue
+        /// </summary>
+        /// <param name="msg">Message to enqueue</param>
+        private void EnqueueInternal(MqttMsgBase msg)
+        {
+            // enqueue is needed (or not)
+            bool enqueue = true;
+
+            // if it is a PUBREL message (for QoS Level 2)
+            if (msg.Type == MqttMsgBase.MQTT_MSG_PUBREL_TYPE)
+            {
+                lock (this.inflightQueue)
+                {
+                    // if it is a PUBREL but the corresponding PUBLISH isn't in the inflight queue,
+                    // it means that we processed PUBLISH message and received PUBREL and we sent PUBCOMP
+                    // but publisher didn't receive PUBCOMP so it re-sent PUBREL. We need only to re-send PUBCOMP.
+
+                    MqttMsgContextFinder msgCtxFinder = new MqttMsgContextFinder(((MqttMsgPubrel)msg).MessageId);
+                    MqttMsgContext msgCtx = (MqttMsgContext)this.inflightQueue.Get(msgCtxFinder.Find);
+                    
+                    // the PUBLISH message isn't in the inflight queue, it was already processed so
+                    // we need to re-send PUBCOMP only
+                    if (msgCtx == null)
+                    {
+                        MqttMsgPubcomp pubcomp = new MqttMsgPubcomp();
+                        pubcomp.MessageId = ((MqttMsgPubrel)msg).MessageId;
+
+                        this.Send(pubcomp.GetBytes());
+
+                        enqueue = false;
+                    }
+                }
+            }
+
+            if (enqueue)
+            {
+                lock (this.internalQueue)
+                {
+                    this.internalQueue.Enqueue(msg);
+                    this.inflightWaitHandle.Set();
+                }
+            }
         }
 
         /// <summary>
@@ -671,7 +745,7 @@ namespace uPLibrary.Networking.M2Mqtt
             int readBytes = 0;
             byte[] fixedHeaderFirstByte = new byte[1];
             byte msgType;
-            
+                        
             while (this.isRunning)
             {
                 try
@@ -710,7 +784,7 @@ namespace uPLibrary.Networking.M2Mqtt
 
                                 throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
 
-                            // CONNACK message received from broker
+                            // PINGRESP message received from broker
                             case MqttMsgBase.MQTT_MSG_PINGRESP_TYPE:
 
                                 this.msgReceived = MqttMsgPingResp.Parse(fixedHeaderFirstByte[0], this.channel);
@@ -728,18 +802,15 @@ namespace uPLibrary.Networking.M2Mqtt
                                 // enqueue SUBACK message received (for QoS Level 1) into the internal queue
                                 MqttMsgSuback suback = MqttMsgSuback.Parse(fixedHeaderFirstByte[0], this.channel);
 
-                                lock (this.internalQueue)
-                                {
-                                    this.internalQueue.Enqueue(suback);
-                                    this.inflightWaitHandle.Set();
-                                }
+                                // enqueue SUBACK message into the internal queue
+                                this.EnqueueInternal(suback);
 
                                 break;
 
                             // PUBLISH message received from broker
                             case MqttMsgBase.MQTT_MSG_PUBLISH_TYPE:
 
-                                MqttMsgPublish publish = MqttMsgPublish.Parse(fixedHeaderFirstByte[0], this.channel);
+                                MqttMsgPublish publish = MqttMsgPublish.Parse(fixedHeaderFirstByte[0], this.channel);                               
 
                                 // enqueue PUBLISH message to acknowledge into the inflight queue
                                 this.EnqueueInflight(publish, MqttMsgFlow.ToAcknowledge);
@@ -752,11 +823,8 @@ namespace uPLibrary.Networking.M2Mqtt
                                 // enqueue PUBACK message received (for QoS Level 1) into the internal queue
                                 MqttMsgPuback puback = MqttMsgPuback.Parse(fixedHeaderFirstByte[0], this.channel);
 
-                                lock (this.internalQueue)
-                                {
-                                    this.internalQueue.Enqueue(puback);
-                                    this.inflightWaitHandle.Set();
-                                }
+                                // enqueue PUBACK message into the internal queue
+                                this.EnqueueInternal(puback);
 
                                 break;
 
@@ -766,11 +834,8 @@ namespace uPLibrary.Networking.M2Mqtt
                                 // enqueue PUBREC message received (for QoS Level 2) into the internal queue
                                 MqttMsgPubrec pubrec = MqttMsgPubrec.Parse(fixedHeaderFirstByte[0], this.channel);
 
-                                lock (this.internalQueue)
-                                {
-                                    this.internalQueue.Enqueue(pubrec);
-                                    this.inflightWaitHandle.Set();
-                                }
+                                // enqueue PUBREC message into the internal queue
+                                this.EnqueueInternal(pubrec);
 
                                 break;
 
@@ -780,11 +845,8 @@ namespace uPLibrary.Networking.M2Mqtt
                                 // enqueue PUBREL message received (for QoS Level 2) into the internal queue
                                 MqttMsgPubrel pubrel = MqttMsgPubrel.Parse(fixedHeaderFirstByte[0], this.channel);
 
-                                lock (this.internalQueue)
-                                {
-                                    this.internalQueue.Enqueue(pubrel);
-                                    this.inflightWaitHandle.Set();
-                                }
+                                // enqueue PUBREL message into the internal queue
+                                this.EnqueueInternal(pubrel);
 
                                 break;
                                 
@@ -794,11 +856,8 @@ namespace uPLibrary.Networking.M2Mqtt
                                 // enqueue PUBCOMP message received (for QoS Level 2) into the internal queue
                                 MqttMsgPubcomp pubcomp = MqttMsgPubcomp.Parse(fixedHeaderFirstByte[0], this.channel);
 
-                                lock (this.internalQueue)
-                                {
-                                    this.internalQueue.Enqueue(pubcomp);
-                                    this.inflightWaitHandle.Set();
-                                }
+                                // enqueue PUBCOMP message into the internal queue
+                                this.EnqueueInternal(pubcomp);
 
                                 break;
 
@@ -813,11 +872,8 @@ namespace uPLibrary.Networking.M2Mqtt
                                 // enqueue UNSUBACK message received (for QoS Level 1) into the internal queue
                                 MqttMsgUnsuback unsuback = MqttMsgUnsuback.Parse(fixedHeaderFirstByte[0], this.channel);
 
-                                lock (this.internalQueue)
-                                {
-                                    this.internalQueue.Enqueue(unsuback);
-                                    this.inflightWaitHandle.Set();
-                                }
+                                // enqueue UNSUBACK message into the internal queue
+                                this.EnqueueInternal(unsuback);
 
                                 break;
 
@@ -1413,6 +1469,32 @@ namespace uPLibrary.Networking.M2Mqtt
             else
                 this.messageIdCounter = ((this.messageIdCounter % UInt16.MaxValue) != 0) ? (ushort)(this.messageIdCounter + 1) : (ushort)0;
             return this.messageIdCounter;
+        }
+
+        /// <summary>
+        /// Finder class for PUBLISH message inside a queue
+        /// </summary>
+        internal class MqttMsgContextFinder
+        {
+            // PUBLISH message id
+            internal ushort MessageId { get; set; }
+
+            /// <summary>
+            /// Constructor
+            /// </summary>
+            /// <param name="messageId">Message Id</param>
+            internal MqttMsgContextFinder(ushort messageId)
+            {
+                this.MessageId = messageId;
+            }
+
+            internal bool Find(object item)
+            {
+                MqttMsgContext msgCtx = (MqttMsgContext)item;
+                return ((msgCtx.Message.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) &&
+                        (((MqttMsgPublish)msgCtx.Message).MessageId == this.MessageId));
+                    
+            }
         }
     }
 }

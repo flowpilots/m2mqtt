@@ -58,6 +58,7 @@
     <Compile Include="MqttClient.cs" />
     <Compile Include="MqttNetworkChannel.cs" />
     <Compile Include="MqttSettings.cs" />
+    <Compile Include="Utility\QueueExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
