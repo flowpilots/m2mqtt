@@ -452,9 +452,7 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="qosLevel">QoS Level</param>
         /// <param name="retain">Retain flag</param>
         /// <returns>Message Id related to PUBLISH message</returns>
-        public ushort Publish(string topic, byte[] message,
-            byte qosLevel = MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE,
-            bool retain = false)
+        public ushort Publish(string topic, byte[] message, byte qosLevel, bool retain)
         {
             MqttMsgPublish publish =
                     new MqttMsgPublish(topic, message, false, qosLevel, retain);
