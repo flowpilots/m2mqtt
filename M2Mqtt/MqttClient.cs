@@ -544,9 +544,9 @@ namespace uPLibrary.Networking.M2Mqtt
                 // update last message sent ticks
                 this.lastCommTime = Environment.TickCount;
             }
-            catch
+            catch (Exception e)
             {
-                throw new MqttCommunicationException();
+                throw new MqttCommunicationException(e);
             }
         }
 
@@ -586,7 +586,7 @@ namespace uPLibrary.Networking.M2Mqtt
                     this.IsConnected = false;
 #endif
 
-                throw new MqttCommunicationException();
+                throw new MqttCommunicationException(e);
             }
 
 #if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
@@ -884,9 +884,9 @@ namespace uPLibrary.Networking.M2Mqtt
                     }
 
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    this.exReceiving = new MqttCommunicationException();
+                    this.exReceiving = new MqttCommunicationException(e);
                 }
             }
         }
