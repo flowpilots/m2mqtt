@@ -32,6 +32,15 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         }
 
         /// <summary>
+        /// Duplicate message flag
+        /// </summary>
+        public bool DupFlag
+        {
+            get { return this.dupFlag; }
+            set { this.dupFlag = value; }
+        }
+
+        /// <summary>
         /// Quality of Service level
         /// </summary>
         public byte QosLevel
@@ -55,25 +64,30 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         private string topic;
         // message data
         private byte[] message;
+        // duplicate delivery
+        private bool dupFlag;
         // quality of service level
-        protected byte qosLevel;
+        private byte qosLevel;
         // retain flag
-        protected bool retain;       
+        private bool retain;       
 
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="topic">Message topic</param>
         /// <param name="message">Message data</param>
+        /// <param name="dupFlag">Duplicate delivery flag</param>
         /// <param name="qosLevel">Quality of Service level</param>
         /// <param name="retain">Retain flag</param>
         public MqttMsgPublishEventArgs(string topic,
             byte[] message,
+            bool dupFlag,
             byte qosLevel,
             bool retain)
         {
             this.topic = topic;
             this.message = message;
+            this.dupFlag = dupFlag;
             this.qosLevel = qosLevel;
             this.retain = retain;
         }

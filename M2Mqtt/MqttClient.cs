@@ -487,7 +487,7 @@ namespace uPLibrary.Networking.M2Mqtt
             if (this.MqttMsgPublishReceived != null)
             {
                 this.MqttMsgPublishReceived(this, 
-                    new MqttMsgPublishEventArgs(publish.Topic, publish.Message, publish.QosLevel, publish.Retain));
+                    new MqttMsgPublishEventArgs(publish.Topic, publish.Message, publish.DupFlag, publish.QosLevel, publish.Retain));
             }
         }
 
