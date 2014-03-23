@@ -121,6 +121,36 @@ namespace uPLibrary.Networking.M2Mqtt
         public bool IsConnected { get; private set; }
 
         /// <summary>
+        /// Client identifier
+        /// </summary>
+        public string ClientId { get; private set; }
+
+        /// <summary>
+        /// Clean session flag
+        /// </summary>
+        public bool CleanSession { get; private set; }
+
+        /// <summary>
+        /// Will flag
+        /// </summary>
+        public bool WillFlag { get; private set; }
+
+        /// <summary>
+        /// Will QOS level
+        /// </summary>
+        public byte WillQosLevel { get; private set; }
+
+        /// <summary>
+        /// Will topic
+        /// </summary>
+        public string WillTopic { get; private set; }
+
+        /// <summary>
+        /// Will message
+        /// </summary>
+        public string WillMessage { get; private set; }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="brokerIpAddress">Broker IP address</param>
@@ -298,6 +328,14 @@ namespace uPLibrary.Networking.M2Mqtt
             // if connection accepted, start keep alive timer and 
             if (connack.ReturnCode == MqttMsgConnack.CONN_ACCEPTED)
             {
+                // set all client properties
+                this.ClientId = clientId;
+                this.CleanSession = cleanSession;
+                this.WillFlag = willFlag;
+                this.WillTopic = willTopic;
+                this.WillMessage = willMessage;
+                this.WillQosLevel = willQosLevel;
+
                 this.keepAlivePeriod = keepAlivePeriod * 1000; // convert in ms
                 
                 // start thread for sending keep alive message to the broker
