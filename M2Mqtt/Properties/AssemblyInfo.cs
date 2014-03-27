@@ -21,8 +21,8 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("3.0.0.5")]
+[assembly: AssemblyVersion("3.1.0.0")]
 // to avoid compilation error (AssemblyFileVersionAttribute doesn't exist) under .Net CF 3.5
 #if !WindowsCE
-[assembly: AssemblyFileVersion("3.0.0.5")]
+[assembly: AssemblyFileVersion("3.1.0.0")]
 #endif

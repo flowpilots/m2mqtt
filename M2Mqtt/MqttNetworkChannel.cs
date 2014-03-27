@@ -22,7 +22,7 @@ namespace uPLibrary.Networking.M2Mqtt
         private IPAddress remoteIpAddress;
         private int remotePort;
 
-        // socket for communication with broker
+        // socket for communication
         private Socket socket;
         // using SSL
         private bool secure;
@@ -81,6 +81,15 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <summary>
         /// Constructor
         /// </summary>
+        /// <param name="socket">Socket opened with the client</param>
+        public MqttNetworkChannel(Socket socket)
+        {
+            this.socket = socket;
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
         /// <param name="remoteHostName">Remote Host name</param>
         /// <param name="remoteIpAddress">Remote IP address</param>
         /// <param name="remotePort">Remote port</param>
@@ -88,7 +97,7 @@ namespace uPLibrary.Networking.M2Mqtt
             this(remoteHostName, remoteIpAddress, remotePort, false, null)
         {
         }
-        
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -144,7 +153,7 @@ namespace uPLibrary.Networking.M2Mqtt
         }
 
         /// <summary>
-        /// Send data on the network channel to the broker
+        /// Send data on the network channel
         /// </summary>
         /// <param name="buffer">Data buffer to send</param>
         /// <returns>Number of byte sent</returns>
@@ -164,7 +173,7 @@ namespace uPLibrary.Networking.M2Mqtt
         }
 
         /// <summary>
-        /// Receive data from the network channel (from broker)
+        /// Receive data from the network
         /// </summary>
         /// <param name="buffer">Data buffer for receiving data</param>
         /// <returns>Number of bytes received</returns>

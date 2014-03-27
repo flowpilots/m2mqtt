@@ -7,7 +7,7 @@
     <ProjectGuid>{194FEA1B-E67F-4FC0-AC47-CD71F7F060CC}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>M2Mqtt</RootNamespace>
+    <RootNamespace>uPLibrary.Networking.M2Mqtt</RootNamespace>
     <AssemblyName>M2Mqtt</AssemblyName>
     <ProjectTypeGuids>{4D628B5B-2FBC-4AA6-8C16-197242AEB884};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <PlatformFamilyName>WindowsCE</PlatformFamilyName>
@@ -62,6 +62,7 @@
     <Compile Include="Messages\MqttMsgBase.cs" />
     <Compile Include="Messages\MqttMsgConnack.cs" />
     <Compile Include="Messages\MqttMsgConnect.cs" />
+	<Compile Include="Messages\MqttMsgConnectEventArgs.cs" />
 	<Compile Include="Messages\MqttMsgContext.cs" />
     <Compile Include="Messages\MqttMsgDisconnect.cs" />
     <Compile Include="Messages\MqttMsgPingReq.cs" />
@@ -76,9 +77,11 @@
     <Compile Include="Messages\MqttMsgSuback.cs" />
     <Compile Include="Messages\MqttMsgSubscribe.cs" />
     <Compile Include="Messages\MqttMsgSubscribedEventArgs.cs" />
+	<Compile Include="Messages\MqttMsgSubscribeEventArgs.cs" />
     <Compile Include="Messages\MqttMsgUnsuback.cs" />
     <Compile Include="Messages\MqttMsgUnsubscribe.cs" />
     <Compile Include="Messages\MqttMsgUnsubscribedEventArgs.cs" />
+	<Compile Include="Messages\MqttMsgUnsubscribeEventArgs.cs" />
     <Compile Include="MqttClient.cs" />
     <Compile Include="MqttNetworkChannel.cs" />
 	<Compile Include="MqttSettings.cs" />
