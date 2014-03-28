@@ -79,6 +79,7 @@ namespace uPLibrary.Networking.M2Mqtt
         /// </summary>
         public delegate void MqttMsgUnsubscribedEventHandler(object sender, MqttMsgUnsubscribedEventArgs e);
 
+#if BROKER
         /// <summary>
         /// Delagate that defines event handler for SUBSCRIBE message received
         /// </summary>
@@ -98,6 +99,7 @@ namespace uPLibrary.Networking.M2Mqtt
         /// Delegate that defines event handler for client disconnection (DISCONNECT message or not)
         /// </summary>
         public delegate void MqttMsgDisconnectEventHandler(object sender, EventArgs e);       
+#endif
 
         // CA certificate
         private X509Certificate caCert;
@@ -148,6 +150,7 @@ namespace uPLibrary.Networking.M2Mqtt
         public event MqttMsgSubscribedEventHandler MqttMsgSubscribed;
         // event for unsubscribed topic
         public event MqttMsgUnsubscribedEventHandler MqttMsgUnsubscribed;
+#if BROKER
         // event for SUBSCRIBE message received
         public event MqttMsgSubscribeEventHandler MqttMsgSubscribeReceived;
         // event for USUBSCRIBE message received
@@ -156,6 +159,7 @@ namespace uPLibrary.Networking.M2Mqtt
         public event MqttMsgConnectEventHandler MqttMsgConnected;
         // event for client disconnection (DISCONNECT message or not)
         public event MqttMsgDisconnectEventHandler MqttMsgDisconnected;
+#endif
         
         // channel to communicate over the network
         private IMqttNetworkChannel channel;
@@ -762,6 +766,7 @@ namespace uPLibrary.Networking.M2Mqtt
             }
         }
 
+#if BROKER
         /// <summary>
         /// Wrapper method for raising SUBSCRIBE message event
         /// </summary>
@@ -812,6 +817,7 @@ namespace uPLibrary.Networking.M2Mqtt
                 this.MqttMsgConnected(this, new MqttMsgConnectEventArgs(connect));
             }
         }
+#endif
 
         /// <summary>
         /// Send a message
@@ -1357,16 +1363,24 @@ namespace uPLibrary.Networking.M2Mqtt
                             // CONNECT message received
                             case MqttMsgBase.MQTT_MSG_CONNECT_TYPE:
 
+#if BROKER
                                 // raise connected client event (CONNECT message received)
                                 this.OnMqttMsgConnected((MqttMsgConnect)msg);
                                 break;
+#else
+                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
+#endif
 
                             // SUBSCRIBE message received
                             case MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE:
 
+#if BROKER
                                 MqttMsgSubscribe subscribe = (MqttMsgSubscribe)msg;
                                 // raise subscribe topic event (SUBSCRIBE message received)
                                 this.OnMqttMsgSubscribeReceived(subscribe.MessageId, subscribe.Topics, subscribe.QoSLevels);
+#else
+                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
+#endif
 
                                 break;
 
@@ -1411,10 +1425,14 @@ namespace uPLibrary.Networking.M2Mqtt
                             // UNSUBSCRIBE message received from client
                             case MqttMsgBase.MQTT_MSG_UNSUBSCRIBE_TYPE:
 
+#if BROKER
                                 MqttMsgUnsubscribe unsubscribe = (MqttMsgUnsubscribe)msg;
                                 // raise unsubscribe topic event (UNSUBSCRIBE message received)
                                 this.OnMqttMsgUnsubscribeReceived(unsubscribe.MessageId, unsubscribe.Topics);
                                 break;
+#else
+                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
+#endif
 
                             // UNSUBACK message received
                             case MqttMsgBase.MQTT_MSG_UNSUBACK_TYPE:
@@ -1426,9 +1444,13 @@ namespace uPLibrary.Networking.M2Mqtt
                             // DISCONNECT message received from client
                             case MqttMsgDisconnect.MQTT_MSG_DISCONNECT_TYPE:
 
+#if BROKER
                                 // raise disconnected client event (DISCONNECT message received)
                                 this.OnMqttMsgDisconnected();
                                 break;
+#else
+                                throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
+#endif
                         }
                     }
                 }
