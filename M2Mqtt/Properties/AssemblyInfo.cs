@@ -1,5 +1,5 @@
 ﻿/*
-M2Mqtt - MQTT Client Library for .Net
+M2Mqtt Project - MQTT Client Library for .Net and GnatMQ MQTT Broker for .NET
 Copyright (c) 2014, Paolo Patierno, All rights reserved.
 
 This library is free software; you can redistribute it and/or
@@ -39,8 +39,8 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("3.3.0.0")]
+[assembly: AssemblyVersion("3.4.0.0")]
 // to avoid compilation error (AssemblyFileVersionAttribute doesn't exist) under .Net CF 3.5
 #if !WindowsCE
-[assembly: AssemblyFileVersion("3.3.0.0")]
+[assembly: AssemblyFileVersion("3.4.0.0")]
 #endif

@@ -1,5 +1,5 @@
 /*
-M2Mqtt - MQTT Client Library for .Net
+M2Mqtt Project - MQTT Client Library for .Net and GnatMQ MQTT Broker for .NET
 Copyright (c) 2014, Paolo Patierno, All rights reserved.
 
 This library is free software; you can redistribute it and/or
@@ -250,6 +250,19 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             }
             
             return buffer;
+        }
+
+        public override string ToString()
+        {
+#if DEBUG
+            return this.GetDebugString(
+                "SUBSCRIBE",
+                new object[] { "messageId", "topics", "qosLevels" },
+                new object[] { this.messageId, this.topics, this.qosLevels });
+#else
+            return base.ToString();
+#endif
+
         }
     }
 }

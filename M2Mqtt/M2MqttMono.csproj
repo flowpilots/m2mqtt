@@ -66,6 +66,7 @@
     <Compile Include="MqttSettings.cs" />
     <Compile Include="Utility\QueueExtension.cs" />
     <Compile Include="IMqttNetworkChannel.cs" />
+	<Compile Include="Utility\Trace.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

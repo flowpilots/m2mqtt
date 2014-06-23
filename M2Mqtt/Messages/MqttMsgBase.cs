@@ -1,5 +1,5 @@
 /*
-M2Mqtt - MQTT Client Library for .Net
+M2Mqtt Project - MQTT Client Library for .Net and GnatMQ MQTT Broker for .NET
 Copyright (c) 2014, Paolo Patierno, All rights reserved.
 
 This library is free software; you can redistribute it and/or
@@ -24,6 +24,7 @@ using System.Net.Security;
 #endif
 #endif
 using System;
+using System.Text;
 
 namespace uPLibrary.Networking.M2Mqtt.Messages
 {
@@ -172,5 +173,78 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             } while ((digit & 128) != 0);
             return value;
         }
+
+#if DEBUG
+        /// <summary>
+        /// Returns a string representation of the message for debugging
+        /// </summary>
+        /// <param name="name">Message name</param>
+        /// <param name="fieldNames">Message fields name</param>
+        /// <param name="fieldValues">Message fields value</param>
+        /// <returns>String representation of the message</returns>
+        protected string GetDebugString(string name, object[] fieldNames, object[] fieldValues)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append(name);
+            
+            if ((fieldNames != null) && (fieldValues != null))
+            {
+                sb.Append("(");
+                bool addComma = false;
+                for (int i = 0; i < fieldValues.Length; i++)
+                {
+                    if (fieldValues[i] != null)
+                    {
+                        if (addComma)
+                        {
+                            sb.Append(",");
+                        }
+
+                        sb.Append(fieldNames[i]);
+                        sb.Append(":");
+                        sb.Append(GetStringObject(fieldValues[i]));
+                        addComma = true;
+                    }
+                }
+                sb.Append(")");
+            }
+            
+            return sb.ToString();
+        }
+
+        object GetStringObject(object value)
+        {
+            byte[] binary = value as byte[];
+            if (binary != null)
+            {
+                string hexChars = "0123456789ABCDEF";
+                StringBuilder sb = new StringBuilder(binary.Length * 2);
+                for (int i = 0; i < binary.Length; ++i)
+                {
+                    sb.Append(hexChars[binary[i] >> 4]);
+                    sb.Append(hexChars[binary[i] & 0x0F]);
+                }
+
+                return sb.ToString();
+            }
+
+            object[] list = value as object[];
+            if (list != null)
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append('[');
+                for (int i = 0; i < list.Length; ++i)
+                {
+                    if (i > 0) sb.Append(',');
+                    sb.Append(list[i]);
+                }
+                sb.Append(']');
+
+                return sb.ToString();
+            }
+
+            return value;
+        }
+#endif
     }
 }

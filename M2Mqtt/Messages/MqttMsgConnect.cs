@@ -1,5 +1,5 @@
 /*
-M2Mqtt - MQTT Client Library for .Net
+M2Mqtt Project - MQTT Client Library for .Net and GnatMQ MQTT Broker for .NET
 Copyright (c) 2014, Paolo Patierno, All rights reserved.
 
 This library is free software; you can redistribute it and/or
@@ -211,6 +211,9 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
         public MqttMsgConnect()
         {
             this.type = MQTT_MSG_CONNECT_TYPE;
+
+            this.protocolName = PROTOCOL_NAME;
+            this.protocolVersion = PROTOCOL_VERSION;
         }
 
         /// <summary>
@@ -248,6 +251,9 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             )
         {
             this.type = MQTT_MSG_CONNECT_TYPE;
+
+            this.protocolName = PROTOCOL_NAME;
+            this.protocolVersion = PROTOCOL_VERSION;
 
             this.clientId = clientId;
             this.username = username;
@@ -504,6 +510,18 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
             }
 
             return buffer;
+        }
+
+        public override string ToString()
+        {
+#if DEBUG
+            return this.GetDebugString(
+                "CONNECT",
+                new object[] { "protocolName", "protocolVersion", "clientId", "willFlag", "willRetain", "willQosLevel", "willTopic", "willMessage", "username", "password", "cleanSession", "keepAlivePeriod" },
+                new object[] { this.protocolName, this.protocolVersion, this.clientId, this.willFlag, this.willRetain, this.willQosLevel, this.willTopic, this.willMessage, this.username, this.password, this.cleanSession, this.keepAlivePeriod });
+#else
+            return base.ToString();
+#endif
         }
     }
 }
