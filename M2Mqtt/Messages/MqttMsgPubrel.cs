@@ -2,18 +2,17 @@
 M2Mqtt Project - MQTT Client Library for .Net and GnatMQ MQTT Broker for .NET
 Copyright (c) 2014, Paolo Patierno, All rights reserved.
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 3.0 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the ""License""); you may not use this 
+file except in compliance with the License. You may obtain a copy of the License at 
+http://www.apache.org/licenses/LICENSE-2.0
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR 
+CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR 
+NON-INFRINGEMENT.
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library.
+See the Apache Version 2.0 License for specific language governing permissions and 
+limitations under the License.
 */
 
 namespace uPLibrary.Networking.M2Mqtt.Messages
@@ -127,8 +126,8 @@ namespace uPLibrary.Networking.M2Mqtt.Messages
 
         public override string ToString()
         {
-#if DEBUG
-            return this.GetDebugString(
+#if TRACE
+            return this.GetTraceString(
                 "PUBREL",
                 new object[] { "messageId" },
                 new object[] { this.messageId });

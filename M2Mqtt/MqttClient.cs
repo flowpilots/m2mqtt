@@ -2,18 +2,17 @@
 M2Mqtt Project - MQTT Client Library for .Net and GnatMQ MQTT Broker for .NET
 Copyright (c) 2014, Paolo Patierno, All rights reserved.
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 3.0 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the ""License""); you may not use this 
+file except in compliance with the License. You may obtain a copy of the License at 
+http://www.apache.org/licenses/LICENSE-2.0
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR 
+CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR 
+NON-INFRINGEMENT.
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library.
+See the Apache Version 2.0 License for specific language governing permissions and 
+limitations under the License.
 */
 
 using System;
@@ -115,6 +114,14 @@ namespace uPLibrary.Networking.M2Mqtt
         private int brokerPort;
         // using SSL
         private bool secure;
+
+#if SSL
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+        // callback for server and client certificate validation
+        private RemoteCertificateValidationCallback userCertificateValidationCallback;
+        private LocalCertificateSelectionCallback userCertificateSelectionCallback;
+#endif
+#endif
 
         // thread for receiving incoming message
         private Thread receiveThread;
@@ -221,6 +228,7 @@ namespace uPLibrary.Networking.M2Mqtt
         /// Constructor
         /// </summary>
         /// <param name="brokerIpAddress">Broker IP address</param>
+        [Obsolete("Use this ctor MqttClient(string brokerHostName) insted")]
         public MqttClient(IPAddress brokerIpAddress) :
             this(brokerIpAddress, MqttSettings.MQTT_BROKER_DEFAULT_PORT, false, null)
         {
@@ -233,15 +241,20 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="brokerPort">Broker port</param>
         /// <param name="secure">Using secure connection</param>
         /// <param name="caCert">CA certificate for secure connection</param>
+        [Obsolete("Use this ctor MqttClient(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert) insted")]
         public MqttClient(IPAddress brokerIpAddress, int brokerPort, bool secure, X509Certificate caCert)
         {
-            this.Init(null, brokerIpAddress, brokerPort, secure, caCert);
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+            this.Init(brokerIpAddress.ToString(), brokerPort, secure, caCert, null, null);
+#else
+            this.Init(brokerIpAddress.ToString(), brokerPort, secure, caCert);
+#endif
         }
 
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="brokerHostName">Broker Host Name</param>
+        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
         public MqttClient(string brokerHostName) :
             this(brokerHostName, MqttSettings.MQTT_BROKER_DEFAULT_PORT, false, null)
         {
@@ -250,26 +263,67 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="brokerHostName">Broker Host Name</param>
+        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
         /// <param name="brokerPort">Broker port</param>
         /// <param name="secure">Using secure connection</param>
         /// <param name="caCert">CA certificate for secure connection</param>
         public MqttClient(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert)
-        {
-            // throw exceptions to the caller
-            IPHostEntry hostEntry = Dns.GetHostEntry(brokerHostName);
-
-            if ((hostEntry != null) && (hostEntry.AddressList.Length > 0))
-            {
-                // check for the first address not null
-                // it seems that with .Net Micro Framework, the IPV6 addresses aren't supported and return "null"
-                int i = 0;
-                while (hostEntry.AddressList[i] == null) i++;
-                this.Init(brokerHostName, hostEntry.AddressList[i], brokerPort, secure, caCert);
-            }
-            else
-                throw new ApplicationException("No address found for the broker");
+        {            
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+                this.Init(brokerHostName, brokerPort, secure, caCert, null, null);
+#else
+                this.Init(brokerHostName, brokerPort, secure, caCert);
+#endif
         }
+
+
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
+        /// <param name="brokerPort">Broker port</param>
+        /// <param name="secure">Using secure connection</param>
+        /// <param name="caCert">CA certificate for secure connection</param>
+        /// <param name="userCertificateValidationCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
+        public MqttClient(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert, 
+            RemoteCertificateValidationCallback userCertificateValidationCallback)
+            : this(brokerHostName, brokerPort, secure, caCert, userCertificateValidationCallback, null)
+        {
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
+        /// <param name="brokerPort">Broker port</param>
+        /// <param name="secure">Using secure connection</param>
+        /// <param name="userCertificateValidationCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
+        /// <param name="userCertificateSelectionCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
+        public MqttClient(string brokerHostName, int brokerPort, bool secure, 
+            RemoteCertificateValidationCallback userCertificateValidationCallback, 
+            LocalCertificateSelectionCallback userCertificateSelectionCallback)
+            : this(brokerHostName, brokerPort, secure, null, userCertificateValidationCallback, userCertificateSelectionCallback)
+        {
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
+        /// <param name="brokerPort">Broker port</param>
+        /// <param name="secure">Using secure connection</param>
+        /// <param name="caCert">CA certificate for secure connection</param>
+        /// <param name="userCertificateValidationCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
+        /// <param name="userCertificateSelectionCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
+        public MqttClient(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert,
+            RemoteCertificateValidationCallback userCertificateValidationCallback,
+            LocalCertificateSelectionCallback userCertificateSelectionCallback)
+        {
+            this.Init(brokerHostName, brokerPort, secure, caCert, userCertificateValidationCallback, userCertificateSelectionCallback);
+        }
+#endif
 
 #if BROKER
         /// <summary>
@@ -304,21 +358,53 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <summary>
         /// MqttClient initialization
         /// </summary>
-        /// <param name="brokerHostName">Broker host name</param>
-        /// <param name="brokerIpAddress">Broker IP address</param>
+        /// <param name="brokerHostName">Broker Host Name or IP Address</param>
         /// <param name="brokerPort">Broker port</param>
         /// <param name="secure">>Using secure connection</param>
         /// <param name="caCert">CA certificate for secure connection</param>
-        private void Init(string brokerHostName, IPAddress brokerIpAddress, int brokerPort, bool secure, X509Certificate caCert)
-        {
-#if SSL
-            // check security parameters
-            if ((secure) && (caCert == null))
-                throw new ArgumentException("Secure requested but CA certificate is null !");
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+        /// <param name="userCertificateSelectionCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
+        /// <param name="userCertificateValidationCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
+        private void Init(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert, 
+            RemoteCertificateValidationCallback userCertificateValidationCallback,
+            LocalCertificateSelectionCallback userCertificateSelectionCallback)
 #else
+        private void Init(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert)
+#endif
+        {
+#if !SSL
+            // check security parameters
             if (secure)
                 throw new ArgumentException("Library compiled without SSL support");
 #endif
+
+            IPAddress brokerIpAddress = null;
+            try
+            {
+                // check if brokerHostName is a valid IP address and get it
+                brokerIpAddress = IPAddress.Parse(brokerHostName);
+            }
+            catch
+            {
+            }
+
+            // in this case the parameter brokerHostName isn't a valid IP address
+            if (brokerIpAddress == null)
+            {
+                IPHostEntry hostEntry = Dns.GetHostEntry(brokerHostName);
+                if ((hostEntry != null) && (hostEntry.AddressList.Length > 0))
+                {
+                    // check for the first address not null
+                    // it seems that with .Net Micro Framework, the IPV6 addresses aren't supported and return "null"
+                    int i = 0;
+                    while (hostEntry.AddressList[i] == null) i++;
+                    brokerIpAddress = hostEntry.AddressList[i];
+                }
+                else
+                {
+                    throw new ApplicationException("No address found for the broker");
+                }
+            }
 
             this.brokerHostName = brokerHostName;
             // if broker hostname is null, set ip address
@@ -334,6 +420,11 @@ namespace uPLibrary.Networking.M2Mqtt
             if (this.secure)
             {
                 this.caCert = caCert;
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+                // set callback for server and client certificate validation
+                this.userCertificateSelectionCallback = userCertificateSelectionCallback;
+                this.userCertificateValidationCallback = userCertificateValidationCallback;
+#endif
             }
 #endif
 
@@ -437,6 +528,8 @@ namespace uPLibrary.Networking.M2Mqtt
                 // create network channel and connect to broker
 #if WINDOWS_PHONE
                 this.channel = new WPMqttNetworkChannel(this.brokerHostName, this.brokerIpAddress, this.brokerPort, this.secure, this.caCert);
+#elif !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+                this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerIpAddress, this.brokerPort, this.secure, this.caCert, this.userCertificateValidationCallback, this.userCertificateSelectionCallback);
 #else
                 this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerIpAddress, this.brokerPort, this.secure, this.caCert);
 #endif
@@ -593,7 +686,9 @@ namespace uPLibrary.Networking.M2Mqtt
             }
             catch (Exception e)
             {
+#if TRACE
                 MqttUtility.Trace.WriteLine(TraceLevel.Error, "Exception occurred: {0}", e.ToString());
+#endif
 
                 this.isKeepAliveTimeout = true;
                 // client must close connection
@@ -876,7 +971,9 @@ namespace uPLibrary.Networking.M2Mqtt
             }
             catch (Exception e)
             {
+#if TRACE
                 MqttUtility.Trace.WriteLine(TraceLevel.Error, "Exception occurred: {0}", e.ToString());
+#endif
 
                 throw new MqttCommunicationException(e);
             }
@@ -888,7 +985,9 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="msg">Message</param>
         private void Send(MqttMsgBase msg)
         {
+#if TRACE
             MqttUtility.Trace.WriteLine(TraceLevel.Frame, "SEND {0}", msg);
+#endif
             this.Send(msg.GetBytes());
         }
 
@@ -922,12 +1021,14 @@ namespace uPLibrary.Networking.M2Mqtt
             }
             catch (SocketException e)
             {
-#if (!MF_FRAMEWORK_VERSION_V4_2 && !MF_FRAMEWORK_VERSION_V4_3 && !COMPACT_FRAMEWORK)
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
                 // connection reset by broker
                 if (e.SocketErrorCode == SocketError.ConnectionReset)
                     this.IsConnected = false;
 #endif
+#if TRACE
                 MqttUtility.Trace.WriteLine(TraceLevel.Error, "Exception occurred: {0}", e.ToString());
+#endif
 
                 throw new MqttCommunicationException(e);
             }
@@ -972,7 +1073,9 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <returns>MQTT message response</returns>
         private MqttMsgBase SendReceive(MqttMsgBase msg, int timeout)
         {
+#if TRACE
             MqttUtility.Trace.WriteLine(TraceLevel.Frame, "SEND {0}", msg);
+#endif
             return this.SendReceive(msg.GetBytes(), timeout);
         }
 
@@ -1169,7 +1272,9 @@ namespace uPLibrary.Networking.M2Mqtt
 
 #if BROKER
                                 MqttMsgConnect connect = MqttMsgConnect.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 Trace.WriteLine(TraceLevel.Frame, "RECV {0}", connect);
+#endif
 
                                 // raise message received event
                                 this.OnMqttMsgReceived(connect);
@@ -1185,7 +1290,9 @@ namespace uPLibrary.Networking.M2Mqtt
                                 throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
 #else
                                 this.msgReceived = MqttMsgConnack.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", this.msgReceived);
+#endif
                                 this.syncEndReceiving.Set();
                                 break;
 #endif
@@ -1195,7 +1302,9 @@ namespace uPLibrary.Networking.M2Mqtt
 
 #if BROKER
                                 this.msgReceived = MqttMsgPingReq.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 Trace.WriteLine(TraceLevel.Frame, "RECV {0}", this.msgReceived);
+#endif
 
                                 MqttMsgPingResp pingresp = new MqttMsgPingResp();
                                 this.Send(pingresp);
@@ -1214,7 +1323,9 @@ namespace uPLibrary.Networking.M2Mqtt
                                 throw new MqttClientException(MqttClientErrorCode.WrongBrokerMessage);
 #else
                                 this.msgReceived = MqttMsgPingResp.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", this.msgReceived);
+#endif
                                 this.syncEndReceiving.Set();
                                 break;
 #endif
@@ -1224,7 +1335,9 @@ namespace uPLibrary.Networking.M2Mqtt
 
 #if BROKER
                                 MqttMsgSubscribe subscribe = MqttMsgSubscribe.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 Trace.WriteLine(TraceLevel.Frame, "RECV {0}", subscribe);
+#endif
 
                                 // raise message received event
                                 this.OnMqttMsgReceived(subscribe);
@@ -1242,7 +1355,9 @@ namespace uPLibrary.Networking.M2Mqtt
 #else
                                 // enqueue SUBACK message received (for QoS Level 1) into the internal queue
                                 MqttMsgSuback suback = MqttMsgSuback.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", suback);
+#endif
 
                                 // enqueue SUBACK message into the internal queue
                                 this.EnqueueInternal(suback);
@@ -1254,7 +1369,9 @@ namespace uPLibrary.Networking.M2Mqtt
                             case MqttMsgBase.MQTT_MSG_PUBLISH_TYPE:
 
                                 MqttMsgPublish publish = MqttMsgPublish.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", publish);
+#endif
 
                                 // enqueue PUBLISH message to acknowledge into the inflight queue
                                 this.EnqueueInflight(publish, MqttMsgFlow.ToAcknowledge);
@@ -1266,7 +1383,9 @@ namespace uPLibrary.Networking.M2Mqtt
 
                                 // enqueue PUBACK message received (for QoS Level 1) into the internal queue
                                 MqttMsgPuback puback = MqttMsgPuback.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", puback);
+#endif
 
                                 // enqueue PUBACK message into the internal queue
                                 this.EnqueueInternal(puback);
@@ -1278,7 +1397,9 @@ namespace uPLibrary.Networking.M2Mqtt
 
                                 // enqueue PUBREC message received (for QoS Level 2) into the internal queue
                                 MqttMsgPubrec pubrec = MqttMsgPubrec.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", pubrec);
+#endif
 
                                 // enqueue PUBREC message into the internal queue
                                 this.EnqueueInternal(pubrec);
@@ -1290,7 +1411,9 @@ namespace uPLibrary.Networking.M2Mqtt
 
                                 // enqueue PUBREL message received (for QoS Level 2) into the internal queue
                                 MqttMsgPubrel pubrel = MqttMsgPubrel.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", pubrel);
+#endif
 
                                 // enqueue PUBREL message into the internal queue
                                 this.EnqueueInternal(pubrel);
@@ -1302,7 +1425,9 @@ namespace uPLibrary.Networking.M2Mqtt
 
                                 // enqueue PUBCOMP message received (for QoS Level 2) into the internal queue
                                 MqttMsgPubcomp pubcomp = MqttMsgPubcomp.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", pubcomp);
+#endif
 
                                 // enqueue PUBCOMP message into the internal queue
                                 this.EnqueueInternal(pubcomp);
@@ -1314,7 +1439,9 @@ namespace uPLibrary.Networking.M2Mqtt
 
 #if BROKER
                                 MqttMsgUnsubscribe unsubscribe = MqttMsgUnsubscribe.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 Trace.WriteLine(TraceLevel.Frame, "RECV {0}", unsubscribe);
+#endif
 
                                 // raise message received event
                                 this.OnMqttMsgReceived(unsubscribe);
@@ -1332,7 +1459,9 @@ namespace uPLibrary.Networking.M2Mqtt
 #else
                                 // enqueue UNSUBACK message received (for QoS Level 1) into the internal queue
                                 MqttMsgUnsuback unsuback = MqttMsgUnsuback.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 MqttUtility.Trace.WriteLine(TraceLevel.Frame, "RECV {0}", unsuback);
+#endif
 
                                 // enqueue UNSUBACK message into the internal queue
                                 this.EnqueueInternal(unsuback);
@@ -1345,7 +1474,9 @@ namespace uPLibrary.Networking.M2Mqtt
 
 #if BROKER
                                 MqttMsgDisconnect disconnect = MqttMsgDisconnect.Parse(fixedHeaderFirstByte[0], this.channel);
+#if TRACE
                                 Trace.WriteLine(TraceLevel.Frame, "RECV {0}", disconnect);
+#endif
 
                                 // raise message received event
                                 this.OnMqttMsgReceived(disconnect);
@@ -1366,7 +1497,9 @@ namespace uPLibrary.Networking.M2Mqtt
                 }
                 catch (Exception e)
                 {
+#if TRACE
                     MqttUtility.Trace.WriteLine(TraceLevel.Error, "Exception occurred: {0}", e.ToString());
+#endif
                     this.exReceiving = new MqttCommunicationException(e);
                 }
             }
@@ -1707,14 +1840,12 @@ namespace uPLibrary.Networking.M2Mqtt
                                             }
 
                                             // it is a PUBACK message or a SUBACK/UNSUBACK message
-                                            if ((msgReceived != null) && ((msgReceived.Type == MqttMsgBase.MQTT_MSG_PUBACK_TYPE) ||
-                                                                          (msgReceived.Type == MqttMsgBase.MQTT_MSG_SUBACK_TYPE) ||
-                                                                          (msgReceived.Type == MqttMsgBase.MQTT_MSG_UNSUBACK_TYPE)))
+                                            if (msgReceived != null)
                                             {
-                                                // PUBACK message or SUBACK message for the current message
-                                                if (((msgInflight.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) && (((MqttMsgPuback)msgReceived).MessageId == ((MqttMsgPublish)msgInflight).MessageId)) ||
-                                                    ((msgInflight.Type == MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE) && (((MqttMsgSuback)msgReceived).MessageId == ((MqttMsgSubscribe)msgInflight).MessageId)) ||
-                                                    ((msgInflight.Type == MqttMsgBase.MQTT_MSG_UNSUBSCRIBE_TYPE) && (((MqttMsgUnsuback)msgReceived).MessageId == ((MqttMsgUnsubscribe)msgInflight).MessageId)))
+                                                // PUBACK message or SUBACK/UNSUBACK message for the current message
+                                                if (((msgReceived.Type == MqttMsgBase.MQTT_MSG_PUBACK_TYPE) && (msgInflight.Type == MqttMsgBase.MQTT_MSG_PUBLISH_TYPE) && (((MqttMsgPuback)msgReceived).MessageId == ((MqttMsgPublish)msgInflight).MessageId)) ||
+                                                    ((msgReceived.Type == MqttMsgBase.MQTT_MSG_SUBACK_TYPE) && (msgInflight.Type == MqttMsgBase.MQTT_MSG_SUBSCRIBE_TYPE) && (((MqttMsgSuback)msgReceived).MessageId == ((MqttMsgSubscribe)msgInflight).MessageId)) ||
+                                                    ((msgReceived.Type == MqttMsgBase.MQTT_MSG_UNSUBACK_TYPE) && (msgInflight.Type == MqttMsgBase.MQTT_MSG_UNSUBSCRIBE_TYPE) && (((MqttMsgUnsuback)msgReceived).MessageId == ((MqttMsgUnsubscribe)msgInflight).MessageId)))
                                                 {
                                                     lock (this.internalQueue)
                                                     {
@@ -1992,7 +2123,14 @@ namespace uPLibrary.Networking.M2Mqtt
             }
             catch (MqttCommunicationException e)
             {
+                // possible exception on Send, I need to re-enqueue not sent message
+                if (msgContext != null)
+                    // re-enqueue message
+                    this.inflightQueue.Enqueue(msgContext);
+
+#if TRACE
                 MqttUtility.Trace.WriteLine(TraceLevel.Error, "Exception occurred: {0}", e.ToString());
+#endif
 
                 this.Close();
 
@@ -2007,10 +2145,8 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <returns>Message identifier</returns>
         private ushort GetMessageId()
         {
-            if (this.messageIdCounter == 0)
-                this.messageIdCounter++;
-            else
-                this.messageIdCounter = ((this.messageIdCounter % UInt16.MaxValue) != 0) ? (ushort)(this.messageIdCounter + 1) : (ushort)0;
+            // if 0 or max UInt16, it becomes 1 (first valid messageId)
+            this.messageIdCounter = ((this.messageIdCounter % UInt16.MaxValue) != 0) ? (ushort)(this.messageIdCounter + 1) : (ushort)1;
             return this.messageIdCounter;
         }
 

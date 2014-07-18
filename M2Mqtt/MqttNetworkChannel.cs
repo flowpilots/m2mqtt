@@ -2,18 +2,17 @@
 M2Mqtt Project - MQTT Client Library for .Net and GnatMQ MQTT Broker for .NET
 Copyright (c) 2014, Paolo Patierno, All rights reserved.
 
-This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 3.0 of the License, or (at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the ""License""); you may not use this 
+file except in compliance with the License. You may obtain a copy of the License at 
+http://www.apache.org/licenses/LICENSE-2.0
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR 
+CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR 
+NON-INFRINGEMENT.
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library.
+See the Apache Version 2.0 License for specific language governing permissions and 
+limitations under the License.
 */
 
 #if SSL
@@ -35,6 +34,10 @@ namespace uPLibrary.Networking.M2Mqtt
     /// </summary>
     public class MqttNetworkChannel : IMqttNetworkChannel
     {
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+        private readonly RemoteCertificateValidationCallback userCertificateValidationCallback;
+        private readonly LocalCertificateSelectionCallback userCertificateSelectionCallback;
+#endif
         // remote host information
         private string remoteHostName;
         private IPAddress remoteIpAddress;
@@ -111,8 +114,12 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="remoteHostName">Remote Host name</param>
         /// <param name="remoteIpAddress">Remote IP address</param>
         /// <param name="remotePort">Remote port</param>
-        public MqttNetworkChannel(string remoteHostName, IPAddress remoteIpAddress, int remotePort) :
-            this(remoteHostName, remoteIpAddress, remotePort, false, null)
+        public MqttNetworkChannel(string remoteHostName, IPAddress remoteIpAddress, int remotePort)
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+            : this(remoteHostName, remoteIpAddress, remotePort, false, null, null, null)
+#else
+            : this(remoteHostName, remoteIpAddress, remotePort, false, null)
+#endif
         {
         }
 
@@ -124,13 +131,25 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="remotePort">Remote port</param>
         /// <param name="secure">Using SSL</param>
         /// <param name="caCert">CA certificate</param>
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+        /// <param name="userCertificateSelectionCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
+        /// <param name="userCertificateValidationCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
+        public MqttNetworkChannel(string remoteHostName, IPAddress remoteIpAddress, int remotePort, bool secure, X509Certificate caCert,
+            RemoteCertificateValidationCallback userCertificateValidationCallback,
+            LocalCertificateSelectionCallback userCertificateSelectionCallback)
+#else
         public MqttNetworkChannel(string remoteHostName, IPAddress remoteIpAddress, int remotePort, bool secure, X509Certificate caCert)
+#endif
         {
             this.remoteHostName = remoteHostName;
             this.remoteIpAddress = remoteIpAddress;
             this.remotePort = remotePort;
             this.secure = secure;
             this.caCert = caCert;
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK)
+            this.userCertificateValidationCallback = userCertificateValidationCallback;
+            this.userCertificateSelectionCallback = userCertificateSelectionCallback;
+#endif
         }
 
         /// <summary>
@@ -151,7 +170,7 @@ namespace uPLibrary.Networking.M2Mqtt
                 this.sslStream = new SslStream(this.socket);
 #else
                 this.netStream = new NetworkStream(this.socket);
-                this.sslStream = new SslStream(this.netStream);
+                this.sslStream = new SslStream(this.netStream, false, this.userCertificateValidationCallback, this.userCertificateSelectionCallback);
 #endif
 
                 // server authentication (SSL/TLS handshake)
@@ -162,9 +181,12 @@ namespace uPLibrary.Networking.M2Mqtt
                     SslVerification.CertificateRequired,
                     SslProtocols.TLSv1);
 #else
-                this.sslStream.AuthenticateAsClient(this.remoteHostName,
-                    new X509CertificateCollection(new X509Certificate[] { this.caCert }),
-                    SslProtocols.Tls, false);
+                      this.sslStream.AuthenticateAsClient(
+                        this.remoteHostName,
+                        null,
+                        SslProtocols.Tls,
+                        false);
+                
 #endif
             }
 #endif
