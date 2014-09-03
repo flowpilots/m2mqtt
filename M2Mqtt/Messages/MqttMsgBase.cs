@@ -15,13 +15,6 @@ See the Apache Version 2.0 License for specific language governing permissions a
 limitations under the License.
 */
 
-#if SSL && !WINDOWS_PHONE
-#if (MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3)
-using Microsoft.SPOT.Net.Security;
-#else
-using System.Net.Security;
-#endif
-#endif
 using System;
 using System.Text;
 

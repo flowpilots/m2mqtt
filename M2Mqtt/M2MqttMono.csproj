@@ -62,7 +62,8 @@
 	<Compile Include="Messages\MqttMsgUnsubscribeEventArgs.cs" />
     <Compile Include="MqttClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="MqttNetworkChannel.cs" />
+    <Compile Include="Net\Fx.cs" />
+    <Compile Include="Net\MqttNetworkChannel.cs" />
     <Compile Include="MqttSettings.cs" />
     <Compile Include="Utility\QueueExtension.cs" />
     <Compile Include="IMqttNetworkChannel.cs" />

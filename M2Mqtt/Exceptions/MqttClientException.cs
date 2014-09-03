@@ -22,7 +22,7 @@ namespace uPLibrary.Networking.M2Mqtt.Exceptions
     /// <summary>
     /// MQTT client exception
     /// </summary>
-    public class MqttClientException : ApplicationException
+    public class MqttClientException : Exception
     {
         /// <summary>
         /// Constructor
