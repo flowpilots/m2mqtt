@@ -1,18 +1,17 @@
 ﻿/*
-M2Mqtt Project - MQTT Client Library for .Net and GnatMQ MQTT Broker for .NET
-Copyright (c) 2014, Paolo Patierno, All rights reserved.
+Copyright (c) 2013, 2014 Paolo Patierno
 
-Licensed under the Apache License, Version 2.0 (the ""License""); you may not use this 
-file except in compliance with the License. You may obtain a copy of the License at 
-http://www.apache.org/licenses/LICENSE-2.0
+All rights reserved. This program and the accompanying materials
+are made available under the terms of the Eclipse Public License v1.0
+and Eclipse Distribution License v1.0 which accompany this distribution. 
 
-THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
-EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR 
-CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR 
-NON-INFRINGEMENT.
+The Eclipse Public License is available at 
+   http://www.eclipse.org/legal/epl-v10.html
+and the Eclipse Distribution License is available at 
+   http://www.eclipse.org/org/documents/edl-v10.php.
 
-See the Apache Version 2.0 License for specific language governing permissions and 
-limitations under the License.
+Contributors:
+   Paolo Patierno - initial API and implementation and/or initial documentation
 */
 
 namespace uPLibrary.Networking.M2Mqtt
