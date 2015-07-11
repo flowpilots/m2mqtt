@@ -9,7 +9,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>uPLibrary.Networking.M2Mqtt</RootNamespace>
-    <AssemblyName>M2Mqtt</AssemblyName>
+    <AssemblyName>M2Mqtt.NetCf39</AssemblyName>
     <TargetFrameworkIdentifier>WindowsEmbeddedCompact</TargetFrameworkIdentifier>
     <TargetFrameworkVersion>v3.9</TargetFrameworkVersion>
     <TargetFrameworkTargetsVersion>v8.0</TargetFrameworkTargetsVersion>
@@ -19,7 +19,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\NetCf39\</OutputPath>
+    <OutputPath>..\bin\Debug\M2Mqtt.NetCf39\</OutputPath>
     <DefineConstants>TRACE;DEBUG;COMPACT_FRAMEWORK</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -28,7 +28,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\NetCf39\</OutputPath>
+    <OutputPath>..\bin\Release\M2Mqtt.NetCf39\</OutputPath>
     <DefineConstants>TRACE;COMPACT_FRAMEWORK</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
