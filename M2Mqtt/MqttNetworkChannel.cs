@@ -61,12 +61,12 @@ namespace uPLibrary.Networking.M2Mqtt
             this.secure = secure;
         }
 
-        public string BrokerHostName
+        public string RemoteHostName
         {
             get { return remoteHostName.RawName; }
         }
 
-        public int BrokerPort
+        public int RemotePort
         {
             get { return remotePort; }
         }

@@ -13,3 +13,4 @@ nuspec/*.mdb
 
 packages/*
 packages/repositories.config
+nuspec/*.pri

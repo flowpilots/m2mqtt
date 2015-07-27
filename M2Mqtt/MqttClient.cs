@@ -315,7 +315,7 @@ namespace uPLibrary.Networking.M2Mqtt
             {
                 throw new ArgumentException("channel can't be null", "channel");
             }
-            this.Init(channel.BrokerHostName, channel.BrokerPort, channel.Secure, channel);
+            this.Init(channel.RemoteHostName, channel.RemotePort, channel.Secure, channel);
 #else
             this.Init(brokerHostName, brokerPort, secure, caCert);
 #endif

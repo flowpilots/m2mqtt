@@ -27,12 +27,12 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <summary>
         /// Broker Host Name or IP Address
         /// </summary>
-        string BrokerHostName { get; }
+        string RemoteHostName { get; }
 
         /// <summary>
         /// Broker port
         /// </summary>
-        int BrokerPort { get; }
+        int RemotePort { get; }
 
         /// <summary>
         /// Using secure connection

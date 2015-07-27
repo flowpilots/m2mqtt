@@ -66,6 +66,11 @@ namespace uPLibrary.Networking.M2Mqtt
         /// </summary>
         public int RemotePort { get { return this.remotePort; } }
 
+        /// <summary>
+        /// Using secure connection
+        /// </summary>
+        public bool Secure { get { return this.secure; } }
+
 #if SSL
         // SSL stream
         private SslStream sslStream;
