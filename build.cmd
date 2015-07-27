@@ -1,5 +1,5 @@
 
-MSBuild.exe M2Mqtt-FlowPilots.sln /p:Configuration=Release
+REM MSBuild.exe M2Mqtt-FlowPilots.sln /p:Configuration=Release
 
 IF NOT EXIST ".\Build\Packages" MKDIR ".\Build\Packages"
 

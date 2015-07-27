@@ -37,6 +37,7 @@
     <!-- A reference to the entire .NET Framework is automatically included -->
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Interfaces\IMqttPlugin.cs" />
     <Compile Include="Exceptions\MqttClientException.cs" />
     <Compile Include="Exceptions\MqttCommunicationException.cs" />
     <Compile Include="Exceptions\MqttConnectionException.cs" />
