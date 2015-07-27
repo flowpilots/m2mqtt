@@ -16,7 +16,7 @@ Contributors:
 
 using System;
 using System.Net;
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP)
+#if !(WINDOWS_APP || WINDOWS_PHONE_APP || PORTABLE)
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 #endif
@@ -35,7 +35,7 @@ using Microsoft.SPOT.Net.Security;
 // else other frameworks (.Net, .Net Compact, Mono, Windows Phone) 
 #else
 using System.Collections.Generic;
-#if (SSL && !(WINDOWS_APP || WINDOWS_PHONE_APP))
+#if (SSL && !(WINDOWS_APP || WINDOWS_PHONE_APP || PORTABLE))
 using System.Security.Authentication;
 using System.Net.Security;
 #endif
@@ -247,7 +247,7 @@ namespace uPLibrary.Networking.M2Mqtt
             get { return this.settings; }
         }
 
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP) 
+#if !(WINDOWS_APP || WINDOWS_PHONE_APP || PORTABLE) 
         /// <summary>
         /// Constructor
         /// </summary>
@@ -276,6 +276,7 @@ namespace uPLibrary.Networking.M2Mqtt
         }
 #endif
 
+#if !(PORTABLE)
         /// <summary>
         /// Constructor
         /// </summary>
@@ -288,6 +289,7 @@ namespace uPLibrary.Networking.M2Mqtt
 #endif
         {
         }
+#endif
 
         /// <summary>
         /// Constructor
@@ -295,24 +297,32 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="brokerHostName">Broker Host Name or IP Address</param>
         /// <param name="brokerPort">Broker port</param>
         /// <param name="secure">Using secure connection</param>
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP)
+#if !(WINDOWS_APP || WINDOWS_PHONE_APP || PORTABLE)
         /// <param name="caCert">CA certificate for secure connection</param>
-        public MqttClient(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert)            
+        public MqttClient(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert)
+#elif (PORTABLE)
+        public MqttClient(IMqttNetworkChannel channel)
 #else
-        public MqttClient(string brokerHostName, int brokerPort, bool secure)            
+        public MqttClient(string brokerHostName, int brokerPort, bool secure)
 #endif
         {
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP)
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP || PORTABLE)
             this.Init(brokerHostName, brokerPort, secure, caCert, null, null);
 #elif (WINDOWS_APP || WINDOWS_PHONE_APP)
             this.Init(brokerHostName, brokerPort, secure);
+#elif (PORTABLE)
+            if (channel == null)
+            {
+                throw new ArgumentException("channel can't be null", "channel");
+            }
+            this.Init(channel.BrokerHostName, channel.BrokerPort, channel.Secure, channel);
 #else
             this.Init(brokerHostName, brokerPort, secure, caCert);
 #endif
         }
 
 
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP)
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP || PORTABLE)
 
         /// <summary>
         /// Constructor
@@ -361,7 +371,7 @@ namespace uPLibrary.Networking.M2Mqtt
 #endif
 
 #if BROKER
-        #if !(WINDOWS_APP || WINDOWS_PHONE_APP)
+#if !(WINDOWS_APP || WINDOWS_PHONE_APP)
         /// <summary>
         /// Constructor
         /// </summary>
@@ -407,7 +417,7 @@ namespace uPLibrary.Networking.M2Mqtt
         /// <param name="brokerPort">Broker port</param>
         /// <param name="secure">>Using secure connection</param>
         /// <param name="caCert">CA certificate for secure connection</param>
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP)
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP || PORTABLE)
         /// <param name="userCertificateSelectionCallback">A RemoteCertificateValidationCallback delegate responsible for validating the certificate supplied by the remote party</param>
         /// <param name="userCertificateValidationCallback">A LocalCertificateSelectionCallback delegate responsible for selecting the certificate used for authentication</param>
         private void Init(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert, 
@@ -415,6 +425,8 @@ namespace uPLibrary.Networking.M2Mqtt
             LocalCertificateSelectionCallback userCertificateSelectionCallback)
 #elif (WINDOWS_APP || WINDOWS_PHONE_APP)
         private void Init(string brokerHostName, int brokerPort, bool secure)
+#elif (PORTABLE)
+        private void Init(string brokerHostName, int brokerPort, bool secure, IMqttNetworkChannel channel)
 #else
         private void Init(string brokerHostName, int brokerPort, bool secure, X509Certificate caCert)
 #endif
@@ -454,10 +466,12 @@ namespace uPLibrary.Networking.M2Mqtt
             this.session = null;
 
             // create network channel
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP)
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP || PORTABLE)
             this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerPort, secure, caCert, userCertificateValidationCallback, userCertificateSelectionCallback);
 #elif (WINDOWS_APP || WINDOWS_PHONE_APP)
             this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerPort, secure);
+#elif (PORTABLE)
+            this.channel = channel;
 #else
             this.channel = new MqttNetworkChannel(this.brokerHostName, this.brokerPort, secure, caCert);
 #endif
@@ -1051,7 +1065,7 @@ namespace uPLibrary.Networking.M2Mqtt
             }
             catch (Exception e)
             {
-#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP)
+#if !(MF_FRAMEWORK_VERSION_V4_2 || MF_FRAMEWORK_VERSION_V4_3 || COMPACT_FRAMEWORK || WINDOWS_APP || WINDOWS_PHONE_APP || PORTABLE)
                 if (typeof(SocketException) == e.GetType())
                 {
                     // connection reset by broker
@@ -1600,7 +1614,7 @@ namespace uPLibrary.Networking.M2Mqtt
                                 (ex.ErrorCode == MqttClientErrorCode.InvalidProtocolName) ||
                                 (ex.ErrorCode == MqttClientErrorCode.InvalidConnectFlags));
                     }
-#if !(WINDOWS_APP || WINDOWS_PHONE_APP)
+#if !(WINDOWS_APP || WINDOWS_PHONE_APP || PORTABLE)
                     else if (e.GetType() == typeof(SocketException))
                     {
                         close = true;

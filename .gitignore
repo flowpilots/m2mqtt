@@ -1,0 +1,15 @@
+.DS_Store
+*~
+*.userprefs
+*.pidb
+*.suo
+bin
+obj
+*.user
+
+*.nupkg
+nuspec/*.dll
+nuspec/*.mdb
+
+packages/*
+packages/repositories.config

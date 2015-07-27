@@ -25,6 +25,21 @@ namespace uPLibrary.Networking.M2Mqtt
     public interface IMqttNetworkChannel
     {
         /// <summary>
+        /// Broker Host Name or IP Address
+        /// </summary>
+        string BrokerHostName { get; }
+
+        /// <summary>
+        /// Broker port
+        /// </summary>
+        int BrokerPort { get; }
+
+        /// <summary>
+        /// Using secure connection
+        /// </summary>
+        bool Secure { get; }
+
+        /// <summary>
         /// Data available on channel
         /// </summary>
         bool DataAvailable { get; }
